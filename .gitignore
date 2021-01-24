@@ -1,4 +1,5 @@
 /cache
-/hooks
+/iso
+/*.iso
 /mount
 /overlay

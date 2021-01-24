@@ -44,6 +44,18 @@ OVERLAY_DIR="$BASE_DIR/overlay" && {
 	done
 }
 
+test ! -e "$CACHE_DIR/ramdisk.img" && {
+	NO_SECONDARY_RAMDISK=true
+}
+
+# Read distro config
+test -e "${DISTRO_CONFIG=:"$BASE_DIR/distro.sh"}" && {
+	source "$DISTRO_CONFIG" || exit
+}
+
+: "${DISTRO_NAME:="Bigdroid"}"
+: "${DISTRO_VERSION:="Cake"}" 
+
 set +a
 
 # CLAP
@@ -53,20 +65,22 @@ case "$1" in
 		setup.iso "$1"
 	;;
 	--clean-cache)
-		clean.cache
+		println.cmd wipedir "$CACHE_DIR"
 	;;
-	--clean-overlay)
+	--unload-overlay)
 		mount.unload
 	;;
-	--setup-image)
+	--load-image)
 		mount.load
 	;;
 	--load-hooks)
 		load.hooks
 	;;
 	--build-image)
-
+		BUILD_IMG_ONLY=true
+		build.iso
 	;;
 	--build-iso)
-
+		build.iso
+	;;
 esac
