@@ -21,7 +21,7 @@ test "$(whoami)" != "root" && {
 ###
 BASE_DIR="$(readlink -f "${0%/*}")"
 PATH="$BASE_DIR/bin:$PATH"
-HOOK_DIR="$BASE_DIR/hooks" && {
+HOOK_DIR="$BASE_DIR/hook" && {
 	PFUNCNAME="hook_dir" println.cmd mkdir -p "$HOOK_DIR"
 }
 
