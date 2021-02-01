@@ -5,7 +5,8 @@ set -a
 ###
 # Load private functions
 ###
-source "$(dirname "$(readlink -f "$0")")/utils.sh" || exit
+SRC_DIR="$(dirname "$(readlink -f "$0")")"
+source "$SRC_DIR/utils.sh" || exit
 
 ###
 # Ensure we are ROOOOOOT
@@ -23,6 +24,7 @@ BASE_DIR="$(readlink -f "${0%/*}")"
 PATH="$BASE_DIR/bin:$PATH"
 HOOK_DIR="$BASE_DIR/hook" && {
 	PFUNCNAME="hook_dir" println.cmd mkdir -p "$HOOK_DIR"
+	chmod -f 777 "$HOOK_DIR"
 }
 
 MOUNT_DIR="$BASE_DIR/mount" && {
@@ -42,6 +44,7 @@ OVERLAY_DIR="$BASE_DIR/overlay" && {
 	for odir in lower worker; do
 		println.cmd mkdir -p "$OVERLAY_DIR/$odir" && chmod 755 "$OVERLAY_DIR/$odir"
 	done
+	unset PFUNCNAME
 }
 
 test ! -e "$CACHE_DIR/ramdisk.img" && {
@@ -49,7 +52,7 @@ test ! -e "$CACHE_DIR/ramdisk.img" && {
 }
 
 # Read distro config
-test -e "${DISTRO_CONFIG=:"$BASE_DIR/distro.sh"}" && {
+test -e "${DISTRO_CONFIG=:"$HOOK_DIR/distro.sh"}" && {
 	source "$DISTRO_CONFIG" || exit
 }
 
@@ -67,7 +70,7 @@ case "$1" in
 	--clean-cache)
 		println.cmd wipedir "$CACHE_DIR"
 	;;
-	--unload-overlay)
+	--unload-image)
 		mount.unload
 	;;
 	--load-image)

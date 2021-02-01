@@ -16,14 +16,17 @@ function println() {
 
 function wipedir() {
 	#export PFUNCNAME="$FUNCNAME"
-	local dir2wipe="$1"
-	find "$dir2wipe" -mindepth 1 -maxdepth 1 -exec rm -r '{}' \;
+	local dir2wipe
+	for dir2wipe in "$@"; do
+		find "$dir2wipe" -mindepth 1 -maxdepth 1 -exec rm -r '{}' \;
+	done
 }
 
 function println.cmd() {
 	local result args
 	args=$(printf '%q ' "$@")
-	println "Running $1"
+	local string="$@"
+	println "Running ${string::69}..."
 	result="$(bash -c "$args" 2>&1)"
 	local RETC="$?"
 	if test "$RETC" != 0; then
@@ -49,37 +52,32 @@ function get.systemimg() {
 }
 
 function mount.overlay() {
-	export PFUNCNAME="$FUNCNAME"
 	for odir in "lower" "worker"; do
-		println.cmd wipedir "$OVERLAY_DIR/$odir"
+		PFUNCNAME="$FUNCNAME::wipedir" println.cmd wipedir "$OVERLAY_DIR/$odir"
 	done
-	println.cmd mount -t overlay overlay \
+	PFUNCNAME="$FUNCNAME::invoke" println.cmd mount -t overlay overlay \
 		-olowerdir="$SYSTEM_MOUNT_DIR",upperdir="$OVERLAY_DIR/lower",workdir="$OVERLAY_DIR/worker" "$SYSTEM_MOUNT_DIR"
 }
 
 function mount.unload() {
-	export PFUNCNAME="$FUNCNAME"
 	while read -r _mountpoint; do
-		println.cmd umount -fd "$_mountpoint"
+		PFUNCNAME="$FUNCNAME" println.cmd umount -fd "$_mountpoint"
 	done < <(mount | grep "$MOUNT_DIR" | awk '{print $3}' | sort -r)
 }
 
 function mount.load() {
-	export PFUNCNAME="$FUNCNAME"
-
 	get.systemimg "$CACHE_DIR"
 
 	# System image
 	mount.unload
 	println.cmd mount -o loop "$SYSTEM_IMAGE" "$SYSTEM_MOUNT_DIR"
 	test -e "$SYSTEM_MOUNT_DIR/system.img" && {
-		println.cmd mount -o loop "$SYSTEM_MOUNT_DIR/system.img" "$SYSTEM_MOUNT_DIR"
+		PFUNCNAME="$FUNCNAME::loop_sysimg" println.cmd mount -o loop "$SYSTEM_MOUNT_DIR/system.img" "$SYSTEM_MOUNT_DIR"
 	}
 	mount.overlay
 
 	# Ramdisk images
-	println.cmd find "$INITIAL_RAMDISK_MOUNT_DIR" "$SECONDARY_RAMDISK_MOUNT_DIR" \
-		-mindepth 1 -maxdepth 1 -exec rm -r '{}' \;
+	PFUNCNAME="$FUNCNAME::wipedir" println.cmd wipedir "$INITIAL_RAMDISK_MOUNT_DIR" "$SECONDARY_RAMDISK_MOUNT_DIR"
 	function ramdisk.extract() {
 		cd "$INITIAL_RAMDISK_MOUNT_DIR" || return
 		zcat "$CACHE_DIR/initrd.img" | cpio -iud || return
@@ -89,28 +87,28 @@ function mount.load() {
 		}
 	}
 	export -f ramdisk.extract
-	println.cmd ramdisk.extract
+	PFUNCNAME="$FUNCNAME::extract_ramdisk" println.cmd ramdisk.extract
 	unset -f ramdisk.extract
 }
 
 function setup.iso() {
-	export PFUNCNAME="$FUNCNAME"
 	local ISO="$1"
 	# Cheanup cache dir
 	mount.unload
-	println.cmd wipedir "$CACHE_DIR"
-	println.cmd 7z x -o"$CACHE_DIR" "$ISO"
+	PFUNCNAME="$FUNCNAME::wipedir" println.cmd wipedir "$CACHE_DIR"
+	PFUNCNAME="$FUNCNAME::extract_iso" println.cmd 7z x -o"$CACHE_DIR" "$ISO"
 
 	get.systemimg "$CACHE_DIR"
 	if test "${SYSTEM_IMAGE##*/}" == "system.sfs"; then
-		println.cmd 7z x -o"$CACHE_DIR" "$SYSTEM_IMAGE"
-		println.cmd rm "$SYSTEM_IMAGE"
+		PFUNCNAME="$FUNCNAME::extract_sfs" println.cmd 7z x -o"$CACHE_DIR" "$SYSTEM_IMAGE"
+		PFUNCNAME="$FUNCNAME::remove_sfs" println.cmd rm "$SYSTEM_IMAGE"
 	fi
 }
 
 function load.hooks() {
 	export PFUNCNAME="$FUNCNAME"
-	println "Loading hooks"
+	source "$SRC_DIR/gearlock_env.sh" || exit
+	println "Attaching hooks"
 	while read -r -d '' hook; do
 		export HOOK_BASE="${hook%/*}"
 		println "Hooking ${HOOK_BASE##*/}"
@@ -118,21 +116,20 @@ function load.hooks() {
 		"$hook" || exit
 		unset HOOK_BASE
 	done < <(find "$HOOK_DIR" -type f -name 'bigdroid.hook.sh' -print0)
+	unset PFUNCNAME
 }
 
 function build.iso() {
-	export PFUNCNAME="$FUNCNAME"
 	set -a
 	ISO_DIR="$BASE_DIR/iso" && {
-		println.cmd mkdir -p "$ISO_DIR"
-		println.cmd wipedir "$ISO_DIR"
+		PFUNCNAME="$FUNCNAME::createdir" println.cmd mkdir -p "$ISO_DIR"
+		PFUNCNAME="$FUNCNAME::wipedir" println.cmd wipedir "$ISO_DIR"
+		# Copy cached files into iso/
+		PFUNCNAME="$FUNCNAME::copy_cache" println.cmd rsync -a "$CACHE_DIR/" "$ISO_DIR"
+		TEMP_SYSTEM_IMAGE_MOUNT="$ISO_DIR/.systemimg_mount"
 	}
-	TEMP_SYSTEM_IMAGE_MOUNT="$ISO_DIR/.systemimg_mount"
 
-	# Copy cached files into iso/
-	println.cmd rsync -a "$CACHE_DIR/" "$ISO_DIR"
-
-	# Detect whether if we need to extend original system image
+	# Extend system image if necessary
 	! mountpoint -q "$SYSTEM_MOUNT_DIR" && {
 		mount.load
     }
@@ -144,9 +141,8 @@ function build.iso() {
 		megs2add="$(( (SYSTEM_MOUNT_DIR_SIZE - ORIG_SYSTEM_IMAGE_SIZE) + 100 ))"
 	}
 
-	# Extend system image if necessary
 	mountpoint -q "$TEMP_SYSTEM_IMAGE_MOUNT" && {
-		println.cmd umount -fd "$TEMP_SYSTEM_IMAGE_MOUNT"
+		PFUNCNAME="$FUNCNAME::unmount_tmp_mp" println.cmd umount -fd "$TEMP_SYSTEM_IMAGE_MOUNT"
 	}
 	test -n "$megs2add" && {
 		function extend.systemimg() {
@@ -155,19 +151,23 @@ function build.iso() {
 			resize2fs "$SYSTEM_IMAGE" || return
 		}
 		export -f extend.systemimg
-		println.cmd extend.systemimg
+		PFUNCNAME="$FUNCNAME::extend.systemimg" println.cmd extend.systemimg
 		unset -f extend.systemimg
 	}
 
 	# Put new system image content
+	export PFUNCNAME="$FUNCNAME::create_new_system"
 	println.cmd mkdir -p "$TEMP_SYSTEM_IMAGE_MOUNT"
 	println.cmd mount -o loop "$SYSTEM_IMAGE" "$TEMP_SYSTEM_IMAGE_MOUNT"
 	println.cmd wipedir "$TEMP_SYSTEM_IMAGE_MOUNT"
 	println.cmd rsync -a "$SYSTEM_MOUNT_DIR/" "$TEMP_SYSTEM_IMAGE_MOUNT"
 	println.cmd umount -fd "$TEMP_SYSTEM_IMAGE_MOUNT"
 	println.cmd rm -rf "$TEMP_SYSTEM_IMAGE_MOUNT"
+	unset PFUNCNAME
+
+	# Create suqashed system image
 	test -z "$BUILD_IMG_ONLY" && {
-		println.cmd mksquashfs "$SYSTEM_IMAGE" "${SYSTEM_IMAGE%/*}/system.sfs"
+		PFUNCNAME="$FUNCNAME::create_sfs" println.cmd mksquashfs "$SYSTEM_IMAGE" "${SYSTEM_IMAGE%/*}/system.sfs"
 	}
 
 	# Create new ramdisk images
@@ -180,7 +180,7 @@ function build.iso() {
 		}
 	}
 	export -f ramdisk.create
-	println.cmd ramdisk.create
+	PFUNCNAME="$FUNCNAME::create_ramdisk" println.cmd ramdisk.create
 	unset -f ramdisk.create
 
 	# Now lets finally create an ISO image
@@ -198,7 +198,7 @@ function build.iso() {
 			)
 		}
 		export -f iso.create
-		println.cmd iso.create
+		PFUNCNAME="$FUNCNAME::create_iso" println.cmd iso.create
 	}
 	
 }
