@@ -117,13 +117,14 @@ function load.hooks() {
 	export PFUNCNAME="$FUNCNAME"
 	source "$SRC_DIR/libgearlock.sh" || exit
 	println "Attaching hooks"
-	while read -r -d '' hook; do
+	readarray -d '' hooks < <(find "$HOOK_DIR" -type f -name 'bigdroid.hook.sh' -print0)
+	for hook in "${hooks[@]}"; do
 		export HOOK_BASE="${hook%/*}"
 		println "Hooking ${HOOK_BASE##*/}"
 		chmod +x "$hook" || exit
-		"$hook" || exit
+        "$hook" || exit
 		unset HOOK_BASE
-	done < <(find "$HOOK_DIR" -type f -name 'bigdroid.hook.sh' -print0)
+	done 
 	unset PFUNCNAME
 }
 
@@ -173,6 +174,7 @@ function build.iso() {
 	# Create suqashed system image
 	test -z "$BUILD_IMG_ONLY" && {
 		PFUNCNAME="$FUNCNAME::create_sfs" println.cmd mksquashfs "$SYSTEM_IMAGE" "${SYSTEM_IMAGE%/*}/system.sfs"
+		PFUNCNAME="$FUNCNAME::remove_sysimg" println.cmd rm "$SYSTEM_IMAGE"
 	}
 
 	# Create new ramdisk images

@@ -34,8 +34,8 @@ MOUNT_DIR="$BASE_DIR/mount" && {
 	done
 }
 
-ISO_DIR="$BASE_DIR/cache" && {
-	PFUNCNAME="cache_dir" println.cmd mkdir -p "$ISO_DIR" && chmod 755 "$ISO_DIR"
+ISO_DIR="$BASE_DIR/iso" && {
+	PFUNCNAME="create::iso_dir" println.cmd mkdir -p "$ISO_DIR" && chmod 755 "$ISO_DIR"
 }
 
 BUILD_DIR="$BASE_DIR/build" && {
