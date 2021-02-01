@@ -28,7 +28,7 @@ HOOK_DIR="$BASE_DIR/hook" && {
 }
 
 MOUNT_DIR="$BASE_DIR/mount" && {
-	for _dir in system secondary_ramdisk initial_ramdisk; do
+	for _dir in system secondary_ramdisk initial_ramdisk install_ramdisk; do
 		PFUNCNAME="mount_dir" println.cmd mkdir -p "$MOUNT_DIR/$_dir" && chmod 755 "$MOUNT_DIR/$_dir"
 		eval "${_dir^^}_MOUNT_DIR=\"$MOUNT_DIR/$_dir\""
 	done
@@ -38,9 +38,9 @@ ISO_DIR="$BASE_DIR/cache" && {
 	PFUNCNAME="cache_dir" println.cmd mkdir -p "$ISO_DIR" && chmod 755 "$ISO_DIR"
 }
 
-TMP_DIR="$BASE_DIR/tmp" && {
-	PFUNCNAME="create::tmp" println.cmd mkdir -p "$TMP_DIR"
-	PFUNCNAME="wipedir::tmp" println.cmd wipedir "$TMP_DIR"
+BUILD_DIR="$BASE_DIR/build" && {
+	PFUNCNAME="create::build_tmp" println.cmd mkdir -p "$BUILD_DIR"
+	PFUNCNAME="wipedir::tmp" println.cmd wipedir "$BUILD_DIR"
 }
 
 OVERLAY_DIR="$BASE_DIR/overlay" && {

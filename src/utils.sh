@@ -76,13 +76,22 @@ function mount.load() {
 	mount.overlay
 
 	# Ramdisk images
-	PFUNCNAME="$FUNCNAME::wipedir" println.cmd wipedir "$INITIAL_RAMDISK_MOUNT_DIR" "$SECONDARY_RAMDISK_MOUNT_DIR"
+	PFUNCNAME="$FUNCNAME::wipedir" println.cmd wipedir "$INITIAL_RAMDISK_MOUNT_DIR" "$SECONDARY_RAMDISK_MOUNT_DIR" "$INSTALL_RAMDISK_MOUNT_DIR"
 	function ramdisk.extract() {
-		cd "$INITIAL_RAMDISK_MOUNT_DIR" || return
-		zcat "$ISO_DIR/initrd.img" | cpio -iud || return
+		function main() {
+			local dir="$1"
+			local img="$2"
+			test -e "$img" && {
+				cd "$dir" || return
+				zcat "$img" | cpio -iud || return
+			}
+			:
+		}
+		
+		main "$INITIAL_RAMDISK_MOUNT_DIR" "$ISO_DIR/initrd.img" || return
+		main "$INSTALL_RAMDISK_MOUNT_DIR" "$ISO_DIR/install.img" || return
 		test -z "$NO_SECONDARY_RAMDISK" && {
-			cd "$SECONDARY_RAMDISK_MOUNT_DIR" || return
-			zcat "$ISO_DIR/ramdisk.img" | cpio -iud || return
+			main "$SECONDARY_RAMDISK_MOUNT_DIR" "$ISO_DIR/ramdisk.img" || return
 		}
 	}
 	export -f ramdisk.extract
@@ -122,14 +131,14 @@ function build.iso() {
 	set -a
 
 	# Copy cached files into iso/
-	PFUNCNAME="$FUNCNAME::cache_iso" println.cmd rsync -a "$ISO_DIR/" "$TMP_DIR"
-	TEMP_SYSTEM_IMAGE_MOUNT="$TMP_DIR/.systemimg_mount"
+	PFUNCNAME="$FUNCNAME::cache_iso" println.cmd rsync -a "$ISO_DIR/" "$BUILD_DIR"
+	TEMP_SYSTEM_IMAGE_MOUNT="$BUILD_DIR/.systemimg_mount"
 
 	# Extend system image if necessary
 	! mountpoint -q "$SYSTEM_MOUNT_DIR" && {
 		mount.load
     }
-	get.systemimg "$TMP_DIR"
+	get.systemimg "$BUILD_DIR"
 	SYSTEM_MOUNT_DIR_SIZE="$(du -sbm "$SYSTEM_MOUNT_DIR" | awk '{print $1}')" || exit
 	ORIG_SYSTEM_IMAGE_SIZE="$(du -sbm "$SYSTEM_IMAGE" | awk '{print $1}')" || exit
 
@@ -168,11 +177,17 @@ function build.iso() {
 
 	# Create new ramdisk images
 	function ramdisk.create() {
-		cd "$INITIAL_RAMDISK_MOUNT_DIR" || exit
-		find . | cpio -o -H newc | gzip > "$TMP_DIR/initrd.img" || return
+		function main() {
+			local dir="$1"
+			local img="$2"
+			cd "$dir" || return
+			find . | cpio -o -H newc | gzip > "$img" || return
+			:
+		}
+		main "$INITIAL_RAMDISK_MOUNT_DIR" "$BUILD_DIR/initrd.img" || return
+		main "$INSTALL_RAMDISK_MOUNT_DIR" "$BUILD_DIR/install.img" || return
 		test -z "$NO_SECONDARY_RAMDISK" && {
-			cd "$SECONDARY_RAMDISK_MOUNT_DIR" || exit
-			find . | cpio -o -H newc | gzip > "$TMP_DIR/ramdisk.img" || return
+			main "$SECONDARY_RAMDISK_MOUNT_DIR" "$BUILD_DIR/ramdisk.img" || return
 		}
 	}
 	export -f ramdisk.create
@@ -185,7 +200,7 @@ function build.iso() {
 			export PFUNCNAME="$FUNCNAME"
 			(
 				OUTPUT_ISO="$BASE_DIR/${DISTRO_NAME}_${DISTRO_VERSION}.iso"
-				cd "$TMP_DIR" || exit
+				cd "$BUILD_DIR" || exit
 				rm -rf '[BOOT]'
 				genisoimage -vJURT -b isolinux/isolinux.bin -c isolinux/boot.cat \
 				-no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot \
