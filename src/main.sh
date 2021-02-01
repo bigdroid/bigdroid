@@ -57,12 +57,11 @@ test ! -e "$ISO_DIR/ramdisk.img" && {
 }
 
 # Read distro config
-test -e "${DISTRO_CONFIG=:"$HOOK_DIR/distro.sh"}" && {
+DISTRO_NAME="Bigdroid"
+DISTRO_VERSION="Cake"
+test -e "${DISTRO_CONFIG:="$HOOK_DIR/distro.sh"}" && {
 	source "$DISTRO_CONFIG" || exit
 }
-
-: "${DISTRO_NAME:="Bigdroid"}"
-: "${DISTRO_VERSION:="Cake"}"
 
 set +a
 
