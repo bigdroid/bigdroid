@@ -15,7 +15,6 @@ function println() {
 }
 
 function wipedir() {
-	#export PFUNCNAME="$FUNCNAME"
 	local dir2wipe
 	for dir2wipe in "$@"; do
 		find "$dir2wipe" -mindepth 1 -maxdepth 1 -exec rm -r '{}' \;
@@ -66,7 +65,7 @@ function mount.unload() {
 }
 
 function mount.load() {
-	get.systemimg "$CACHE_DIR"
+	get.systemimg "$ISO_DIR"
 
 	# System image
 	mount.unload
@@ -80,10 +79,10 @@ function mount.load() {
 	PFUNCNAME="$FUNCNAME::wipedir" println.cmd wipedir "$INITIAL_RAMDISK_MOUNT_DIR" "$SECONDARY_RAMDISK_MOUNT_DIR"
 	function ramdisk.extract() {
 		cd "$INITIAL_RAMDISK_MOUNT_DIR" || return
-		zcat "$CACHE_DIR/initrd.img" | cpio -iud || return
+		zcat "$ISO_DIR/initrd.img" | cpio -iud || return
 		test -z "$NO_SECONDARY_RAMDISK" && {
 			cd "$SECONDARY_RAMDISK_MOUNT_DIR" || return
-			zcat "$CACHE_DIR/ramdisk.img" | cpio -iud || return
+			zcat "$ISO_DIR/ramdisk.img" | cpio -iud || return
 		}
 	}
 	export -f ramdisk.extract
@@ -95,19 +94,19 @@ function setup.iso() {
 	local ISO="$1"
 	# Cheanup cache dir
 	mount.unload
-	PFUNCNAME="$FUNCNAME::wipedir" println.cmd wipedir "$CACHE_DIR"
-	PFUNCNAME="$FUNCNAME::extract_iso" println.cmd 7z x -o"$CACHE_DIR" "$ISO"
+	PFUNCNAME="$FUNCNAME::wipedir" println.cmd wipedir "$ISO_DIR"
+	PFUNCNAME="$FUNCNAME::extract_iso" println.cmd 7z x -o"$ISO_DIR" "$ISO"
 
-	get.systemimg "$CACHE_DIR"
+	get.systemimg "$ISO_DIR"
 	if test "${SYSTEM_IMAGE##*/}" == "system.sfs"; then
-		PFUNCNAME="$FUNCNAME::extract_sfs" println.cmd 7z x -o"$CACHE_DIR" "$SYSTEM_IMAGE"
+		PFUNCNAME="$FUNCNAME::extract_sfs" println.cmd 7z x -o"$ISO_DIR" "$SYSTEM_IMAGE"
 		PFUNCNAME="$FUNCNAME::remove_sfs" println.cmd rm "$SYSTEM_IMAGE"
 	fi
 }
 
 function load.hooks() {
 	export PFUNCNAME="$FUNCNAME"
-	source "$SRC_DIR/gearlock_env.sh" || exit
+	source "$SRC_DIR/libgearlock.sh" || exit
 	println "Attaching hooks"
 	while read -r -d '' hook; do
 		export HOOK_BASE="${hook%/*}"
@@ -121,19 +120,16 @@ function load.hooks() {
 
 function build.iso() {
 	set -a
-	ISO_DIR="$BASE_DIR/iso" && {
-		PFUNCNAME="$FUNCNAME::createdir" println.cmd mkdir -p "$ISO_DIR"
-		PFUNCNAME="$FUNCNAME::wipedir" println.cmd wipedir "$ISO_DIR"
-		# Copy cached files into iso/
-		PFUNCNAME="$FUNCNAME::copy_cache" println.cmd rsync -a "$CACHE_DIR/" "$ISO_DIR"
-		TEMP_SYSTEM_IMAGE_MOUNT="$ISO_DIR/.systemimg_mount"
-	}
+
+	# Copy cached files into iso/
+	PFUNCNAME="$FUNCNAME::cache_iso" println.cmd rsync -a "$ISO_DIR/" "$TMP_DIR"
+	TEMP_SYSTEM_IMAGE_MOUNT="$TMP_DIR/.systemimg_mount"
 
 	# Extend system image if necessary
 	! mountpoint -q "$SYSTEM_MOUNT_DIR" && {
 		mount.load
     }
-	get.systemimg "$ISO_DIR"
+	get.systemimg "$TMP_DIR"
 	SYSTEM_MOUNT_DIR_SIZE="$(du -sbm "$SYSTEM_MOUNT_DIR" | awk '{print $1}')" || exit
 	ORIG_SYSTEM_IMAGE_SIZE="$(du -sbm "$SYSTEM_IMAGE" | awk '{print $1}')" || exit
 
@@ -173,10 +169,10 @@ function build.iso() {
 	# Create new ramdisk images
 	function ramdisk.create() {
 		cd "$INITIAL_RAMDISK_MOUNT_DIR" || exit
-		find . | cpio -o -H newc | gzip > "$ISO_DIR/initrd.img" || return
+		find . | cpio -o -H newc | gzip > "$TMP_DIR/initrd.img" || return
 		test -z "$NO_SECONDARY_RAMDISK" && {
 			cd "$SECONDARY_RAMDISK_MOUNT_DIR" || exit
-			find . | cpio -o -H newc | gzip > "$ISO_DIR/ramdisk.img" || return
+			find . | cpio -o -H newc | gzip > "$TMP_DIR/ramdisk.img" || return
 		}
 	}
 	export -f ramdisk.create
@@ -189,7 +185,7 @@ function build.iso() {
 			export PFUNCNAME="$FUNCNAME"
 			(
 				OUTPUT_ISO="$BASE_DIR/${DISTRO_NAME}_${DISTRO_VERSION}.iso"
-				cd "$ISO_DIR" || exit
+				cd "$TMP_DIR" || exit
 				rm -rf '[BOOT]'
 				genisoimage -vJURT -b isolinux/isolinux.bin -c isolinux/boot.cat \
 				-no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot \

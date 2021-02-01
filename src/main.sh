@@ -34,8 +34,13 @@ MOUNT_DIR="$BASE_DIR/mount" && {
 	done
 }
 
-CACHE_DIR="$BASE_DIR/cache" && {
-	PFUNCNAME="cache_dir" println.cmd mkdir -p "$CACHE_DIR" && chmod 755 "$CACHE_DIR"
+ISO_DIR="$BASE_DIR/cache" && {
+	PFUNCNAME="cache_dir" println.cmd mkdir -p "$ISO_DIR" && chmod 755 "$ISO_DIR"
+}
+
+TMP_DIR="$BASE_DIR/tmp" && {
+	PFUNCNAME="create::tmp" println.cmd mkdir -p "$TMP_DIR"
+	PFUNCNAME="wipedir::tmp" println.cmd wipedir "$TMP_DIR"
 }
 
 OVERLAY_DIR="$BASE_DIR/overlay" && {
@@ -47,7 +52,7 @@ OVERLAY_DIR="$BASE_DIR/overlay" && {
 	unset PFUNCNAME
 }
 
-test ! -e "$CACHE_DIR/ramdisk.img" && {
+test ! -e "$ISO_DIR/ramdisk.img" && {
 	NO_SECONDARY_RAMDISK=true
 }
 
@@ -57,7 +62,7 @@ test -e "${DISTRO_CONFIG=:"$HOOK_DIR/distro.sh"}" && {
 }
 
 : "${DISTRO_NAME:="Bigdroid"}"
-: "${DISTRO_VERSION:="Cake"}" 
+: "${DISTRO_VERSION:="Cake"}"
 
 set +a
 
@@ -68,7 +73,7 @@ case "$1" in
 		setup.iso "$1"
 	;;
 	--clean-cache)
-		println.cmd wipedir "$CACHE_DIR"
+		println.cmd wipedir "$ISO_DIR"
 	;;
 	--unload-image)
 		mount.unload
