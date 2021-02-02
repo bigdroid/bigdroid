@@ -127,7 +127,11 @@ function load.hooks() {
 		export HOOK_BASE="${hook%/*}"
 		println "Hooking ${HOOK_BASE##*/}"
 		chmod +x "$hook" || exit
-        "$hook" || exit
+		if test -z "$HOOKS_ALLYES"; then
+			"$hook" || exit
+		else
+			yes | "$hook" || exit
+		fi
 		unset HOOK_BASE
 	done 
 	unset PFUNCNAME
@@ -136,6 +140,7 @@ function load.hooks() {
 function build.iso() {
 	set -a
 
+	PFUNCNAME="wipedir::tmp" println.cmd wipedir "$BUILD_DIR"
 	# Remove ghome dir if empty
 	test -z "$(find "$SYSTEM_MOUNT_DIR/ghome" -maxdepth 0 -empty)" && \
 		PFUNCNAME="$FUNCNAME::ghome::wipedir" println.cmd rm -r "$SYSTEM_MOUNT_DIR/ghome"

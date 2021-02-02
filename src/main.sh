@@ -40,7 +40,6 @@ ISO_DIR="$BASE_DIR/iso" && {
 
 BUILD_DIR="$BASE_DIR/build" && {
 	PFUNCNAME="create::build_tmp" println.cmd mkdir -p "$BUILD_DIR"
-	PFUNCNAME="wipedir::tmp" println.cmd wipedir "$BUILD_DIR"
 }
 
 OVERLAY_DIR="$BASE_DIR/overlay" && {
@@ -80,6 +79,9 @@ for arg in "${@}"; do
 		;;
 		--load-image)
 			mount.load
+		;;
+		--hooks-allyes)
+			export HOOKS_ALLYES=true
 		;;
 		--load-hooks)
 			load.hooks
