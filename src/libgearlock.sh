@@ -9,13 +9,10 @@ set -a
 ############# 
 SYSTEM_DIR="$SYSTEM_MOUNT_DIR"
 
-	GHOME="$(
-		if test -d "$SYSTEM_DIR/ghome"; then
-			echo "$SYSTEM_DIR/ghome"
-		else
-			echo "$DATA_DIR/ghome"
-		fi
-	)"
+	GHOME="$SYSTEM_DIR/ghome" && {
+		mkdir -p "$GHOME"
+		chmod 755 "$GHOME"
+	}
 	DEPDIR="$GHOME/dependencies"
 	STATDIR="$GHOME/status"
 	GRLOAD="$GRROOT/gearload"
@@ -32,16 +29,13 @@ SYSTEM_DIR="$SYSTEM_MOUNT_DIR"
 	KMODDIR="$SYSTEM_DIR/lib/modules"
 	
 	HOST_ARCH="$(
-		if test "$CPU_ARCH" == "x86"; then
-			HOST_ARCH="x86"
-		elif test -e "$SYSTEM_DIR/lib64"; then
-			HOST_ARCH="x86_64"
+		if test -e "$SYSTEM_DIR/lib64"; then
+			echo "x86_64"
 		elif test -e "$SYSTEM_DIR/lib"; then
-			HOST_ARCH="x86"
-		else
-			HOST_ARCH="$CPU_ARCH"
+			echo "x86"
 		fi
     )"
+	CPU_ARCH="$HOST_ARCH"
     
 	if test -e "$SYSTEM_DIR/build.prop"; then
 		SDK="$(sed -n "s/^ro.build.version.sdk=//p" "$SYSTEM_DIR/build.prop" 2>/dev/null | head -n 1)"

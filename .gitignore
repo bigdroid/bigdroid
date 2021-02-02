@@ -1,6 +1,6 @@
 /build
 /tmp
-/hook
+/hooks
 /iso
 /*.iso
 /mount

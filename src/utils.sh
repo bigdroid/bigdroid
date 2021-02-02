@@ -114,10 +114,15 @@ function setup.iso() {
 }
 
 function load.hooks() {
+	! mountpoint -q "$SYSTEM_MOUNT_DIR" && {
+		(exit 1)
+		println "You need to load-image first"
+		exit 1
+	}
 	export PFUNCNAME="$FUNCNAME"
 	source "$SRC_DIR/libgearlock.sh" || exit
 	println "Attaching hooks"
-	readarray -d '' hooks < <(find "$HOOK_DIR" -type f -name 'bigdroid.hook.sh' -print0)
+	readarray -d '' hooks < <(find "$HOOKS_DIR" -type f -name 'bigdroid.hook.sh' -print0)
 	for hook in "${hooks[@]}"; do
 		export HOOK_BASE="${hook%/*}"
 		println "Hooking ${HOOK_BASE##*/}"
@@ -130,6 +135,10 @@ function load.hooks() {
 
 function build.iso() {
 	set -a
+
+	# Remove ghome dir if empty
+	test -z "$(find "$SYSTEM_MOUNT_DIR/ghome" -maxdepth 0 -empty)" && \
+		PFUNCNAME="$FUNCNAME::ghome::wipedir" println.cmd rm -r "$SYSTEM_MOUNT_DIR/ghome"
 
 	# Copy cached files into iso/
 	PFUNCNAME="$FUNCNAME::cache_iso" println.cmd rsync -a "$ISO_DIR/" "$BUILD_DIR"
@@ -213,6 +222,7 @@ function build.iso() {
 		export -f iso.create
 		PFUNCNAME="$FUNCNAME::create_iso" println.cmd iso.create
 	}
+	:
 	
 }
 
@@ -224,3 +234,7 @@ function build.iso() {
 #######################
 #######################
 
+function gclone(){
+	echo -e "============= ${GREEN}Progress${RC} = ${ORANGE}Speed${RC} ========================================"
+	rsync -ah --info=progress2 "$@"
+}

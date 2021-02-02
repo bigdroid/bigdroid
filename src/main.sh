@@ -22,9 +22,9 @@ test "$(whoami)" != "root" && {
 ###
 BASE_DIR="$(readlink -f "${0%/*}")"
 PATH="$BASE_DIR/bin:$PATH"
-HOOK_DIR="$BASE_DIR/hook" && {
-	PFUNCNAME="hook_dir" println.cmd mkdir -p "$HOOK_DIR"
-	chmod -f 777 "$HOOK_DIR"
+HOOKS_DIR="$BASE_DIR/hooks" && {
+	PFUNCNAME="hook_dir" println.cmd mkdir -p "$HOOKS_DIR"
+	chmod -f 777 "$HOOKS_DIR"
 }
 
 MOUNT_DIR="$BASE_DIR/mount" && {
@@ -59,35 +59,37 @@ test ! -e "$ISO_DIR/ramdisk.img" && {
 # Read distro config
 DISTRO_NAME="Bigdroid"
 DISTRO_VERSION="Cake"
-test -e "${DISTRO_CONFIG:="$HOOK_DIR/distro.sh"}" && {
+test -e "${DISTRO_CONFIG:="$HOOKS_DIR/distro.sh"}" && {
 	source "$DISTRO_CONFIG" || exit
 }
 
 set +a
 
 # CLAP
-case "$1" in
-	--setup-iso)
-		shift
-		setup.iso "$1"
-	;;
-	--clean-cache)
-		println.cmd wipedir "$ISO_DIR"
-	;;
-	--unload-image)
-		mount.unload
-	;;
-	--load-image)
-		mount.load
-	;;
-	--load-hooks)
-		load.hooks
-	;;
-	--build-image)
-		BUILD_IMG_ONLY=true
-		build.iso
-	;;
-	--build-iso)
-		build.iso
-	;;
-esac
+for arg in "${@}"; do
+	case "$arg" in
+		--setup-iso)
+			shift
+			setup.iso "$1"
+		;;
+		--clean-cache)
+			println.cmd wipedir "$ISO_DIR"
+		;;
+		--unload-image)
+			mount.unload
+		;;
+		--load-image)
+			mount.load
+		;;
+		--load-hooks)
+			load.hooks
+		;;
+		--build-image)
+			BUILD_IMG_ONLY=true
+			build.iso
+		;;
+		--build-iso)
+			build.iso
+		;;
+	esac
+done
