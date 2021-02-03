@@ -203,15 +203,20 @@ function build.iso() {
 	# Now lets finally create an ISO image
 	test -z "$BUILD_IMG_ONLY" && {
 		function iso.create() {
-			export PFUNCNAME="$FUNCNAME"
 			(
+				for item in '.disk' 'boot' 'efi' 'isolinux' 'install.img' 'findme'; do
+					test ! -e "$BUILD_DIR/$item" && {
+						rsync -a "$SRC_DIR/iso_common/$item" "$BUILD_DIR" || return
+					}
+				done
 				OUTPUT_ISO="$BASE_DIR/${DISTRO_NAME}_${DISTRO_VERSION}.iso"
-				cd "$BUILD_DIR" || exit
-				rm -rf '[BOOT]'
+				cd "$BUILD_DIR" || return
+				rm -rf '[BOOT]' "$OUTPUT_ISO" || return
+				find "$BUILD_DIR" -type f -name 'TRANS.TBL' -delete || return
 				genisoimage -vJURT -b isolinux/isolinux.bin -c isolinux/boot.cat \
 				-no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot \
 				-e boot/grub/efi.img -no-emul-boot -input-charset utf-8 \
-				-V "$DISTRO_NAME" -o "$OUTPUT_ISO" .
+				-V "$DISTRO_NAME" -o "$OUTPUT_ISO" . || return
 			)
 		}
 		export -f iso.create
