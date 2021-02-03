@@ -39,7 +39,11 @@ ISO_DIR="$BASE_DIR/iso" && {
 }
 
 BUILD_DIR="$BASE_DIR/build" && {
-	PFUNCNAME="create::build_tmp" println.cmd mkdir -p "$BUILD_DIR"
+	PFUNCNAME="create::build_dir" println.cmd mkdir -p "$BUILD_DIR"
+}
+
+TMP_DIR="$BASE_DIR/tmp" && {
+	PFUNCNAME="create::tmp_dir" println.cmd mkdir -p "$TMP_DIR"
 }
 
 OVERLAY_DIR="$BASE_DIR/overlay" && {
