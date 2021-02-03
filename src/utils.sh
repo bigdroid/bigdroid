@@ -39,9 +39,9 @@ function mount.unload() {
 
 function mount.load() {
 	get.systemimg "$ISO_DIR"
-
-	# System image
 	mount.unload
+	
+	# System image
 	println.cmd mount -o loop "$SYSTEM_IMAGE" "$SYSTEM_MOUNT_DIR"
 	test -e "$SYSTEM_MOUNT_DIR/system.img" && {
 		PFUNCNAME="$FUNCNAME::loop_sysimg" println.cmd mount -o loop "$SYSTEM_MOUNT_DIR/system.img" "$SYSTEM_MOUNT_DIR"
@@ -119,7 +119,16 @@ function load.hooks() {
 function build.iso() {
 	set -a
 
+	# Cleanup build dir
 	PFUNCNAME="wipedir::tmp" println.cmd wipedir "$BUILD_DIR"
+	
+	# Bring standard ISO components when required
+	for item in '.disk' 'boot' 'efi' 'isolinux' 'install.img' 'findme'; do
+		test ! -e "$BUILD_DIR/$item" && {
+			rsync -a "$SRC_DIR/iso_common/$item" "$BUILD_DIR" || return
+		}
+	done
+	
 	# Remove ghome dir if empty
 	test -n "$(find "$SYSTEM_MOUNT_DIR/ghome" -maxdepth 0 -empty)" && \
 		PFUNCNAME="$FUNCNAME::ghome::wipedir" println.cmd rm -r "$SYSTEM_MOUNT_DIR/ghome"
@@ -204,11 +213,6 @@ function build.iso() {
 	test -z "$BUILD_IMG_ONLY" && {
 		function iso.create() {
 			(
-				for item in '.disk' 'boot' 'efi' 'isolinux' 'install.img' 'findme'; do
-					test ! -e "$BUILD_DIR/$item" && {
-						rsync -a "$SRC_DIR/iso_common/$item" "$BUILD_DIR" || return
-					}
-				done
 				OUTPUT_ISO="$BASE_DIR/${DISTRO_NAME}_${DISTRO_VERSION}.iso"
 				cd "$BUILD_DIR" || return
 				rm -rf '[BOOT]' "$OUTPUT_ISO" || return

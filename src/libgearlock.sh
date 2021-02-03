@@ -9,6 +9,7 @@ set -a
 ############# 
 SYSTEM_DIR="$SYSTEM_MOUNT_DIR"
 
+	RECOVERY="yes"
 	GHOME="$SYSTEM_DIR/ghome" && {
 		mkdir -p "$GHOME"
 		chmod 755 "$GHOME"
