@@ -8,33 +8,6 @@
 #######################
 #######################
 
-function println() {
-	local RETC="$?"
-	: "${PFUNCNAME:="$FUNCNAME"}"
-	echo -e "$(date "+%F %T [$(test "$RETC" != 0 && echo "ERROR::$RETC" || echo 'INFO')]") (${0##*/}::$PFUNCNAME): $@"
-}
-
-function wipedir() {
-	local dir2wipe
-	for dir2wipe in "$@"; do
-		find "$dir2wipe" -mindepth 1 -maxdepth 1 -exec rm -r '{}' \;
-	done
-}
-
-function println.cmd() {
-	local result args
-	args=$(printf '%q ' "$@")
-	local string="$@"
-	println "Running ${string::69}..."
-	result="$(bash -c "$args" 2>&1)"
-	local RETC="$?"
-	if test "$RETC" != 0; then
-		(exit "$RETC")
-		println "$result"
-		exit "$RETC"
-	fi
-}
-
 function get.systemimg() {
 	local IMG_BASE="$1"
 	export SYSTEM_IMAGE="$(
@@ -122,15 +95,21 @@ function load.hooks() {
 	export PFUNCNAME="$FUNCNAME"
 	source "$SRC_DIR/libgearlock.sh" || exit
 	println "Attaching hooks"
-	readarray -d '' hooks < <(find "$HOOKS_DIR" -type f -name 'bigdroid.hook.sh' -print0)
+	if test -e "${HOOKS_LIST_FILE:="$HOOKS_DIR/hooks_list.sh"}"; then
+		mapfile -t hooks < <(awk 'NF' < "$HOOKS_LIST_FILE" | sed '/#.*/d' \
+							| awk -v hook_dir="$HOOKS_DIR" \
+							'{print hook_dir "/"$0"/bigdroid.hook.sh"}')
+	else
+		readarray -d '' hooks < <(find "$HOOKS_DIR" -type f -name 'bigdroid.hook.sh' -print0)
+	fi
 	for hook in "${hooks[@]}"; do
 		export HOOK_BASE="${hook%/*}"
 		println "Hooking ${HOOK_BASE##*/}"
 		chmod +x "$hook" || exit
-		if test -z "$HOOKS_ALLYES"; then
-			"$hook" || exit
+		if test -z "$AUTO_REPLY" || grep -q 'bigdroid.hook.noautoreply' "$hook"; then
+			bash -e "$hook" || exit
 		else
-			yes | "$hook" || exit
+			yes | bash -e "$hook" || exit
 		fi
 		unset HOOK_BASE
 	done 
@@ -142,7 +121,7 @@ function build.iso() {
 
 	PFUNCNAME="wipedir::tmp" println.cmd wipedir "$BUILD_DIR"
 	# Remove ghome dir if empty
-	test -z "$(find "$SYSTEM_MOUNT_DIR/ghome" -maxdepth 0 -empty)" && \
+	test -n "$(find "$SYSTEM_MOUNT_DIR/ghome" -maxdepth 0 -empty)" && \
 		PFUNCNAME="$FUNCNAME::ghome::wipedir" println.cmd rm -r "$SYSTEM_MOUNT_DIR/ghome"
 
 	# Copy cached files into iso/
@@ -181,8 +160,19 @@ function build.iso() {
 	println.cmd mount -o loop "$SYSTEM_IMAGE" "$TEMP_SYSTEM_IMAGE_MOUNT"
 	println.cmd wipedir "$TEMP_SYSTEM_IMAGE_MOUNT"
 	println.cmd rsync -a "$SYSTEM_MOUNT_DIR/" "$TEMP_SYSTEM_IMAGE_MOUNT"
+	# Determine if we need to reduce system image size
+	sysimg_freeSpace="$(df -h --output=avail "$TEMP_SYSTEM_IMAGE_MOUNT" | tail -n1 | xargs)"
+	test "${sysimg_freeSpace/M/}" -gt 100 && {
+		sysimg_reduceSize=true
+	}
 	println.cmd umount -fd "$TEMP_SYSTEM_IMAGE_MOUNT"
+	e2fsck -fy "$SYSTEM_IMAGE" >/dev/null 2>&1
 	println.cmd rm -rf "$TEMP_SYSTEM_IMAGE_MOUNT"
+	test -n "$sysimg_reduceSize" && {
+		sysimg_newSize="$(( (ORIG_SYSTEM_IMAGE_SIZE - ${sysimg_freeSpace/M/}) + 100 ))M"
+		PFUNCNAME="$FUNCNAME::reduce_system_size" println.cmd resize2fs "$SYSTEM_IMAGE" "$sysimg_newSize"
+		e2fsck -fy "$SYSTEM_IMAGE" >/dev/null 2>&1
+	}
 	unset PFUNCNAME
 
 	# Create suqashed system image
@@ -242,4 +232,31 @@ function build.iso() {
 function gclone(){
 	echo -e "============= ${GREEN}Progress${RC} = ${ORANGE}Speed${RC} ========================================"
 	rsync -ah --info=progress2 "$@"
+}
+
+function println() {
+	local RETC="$?"
+	: "${PFUNCNAME:="$FUNCNAME"}"
+	echo -e "$(date "+%F %T [$(test "$RETC" != 0 && echo "ERROR::$RETC" || echo 'INFO')]") (${0##*/}::$PFUNCNAME): $@"
+}
+
+function wipedir() {
+	local dir2wipe
+	for dir2wipe in "$@"; do
+		find "$dir2wipe" -mindepth 1 -maxdepth 1 -exec rm -r '{}' \;
+	done
+}
+
+function println.cmd() {
+	local result args
+	args=$(printf '%q ' "$@")
+	local string="$@"
+	println "Running ${string::69}..."
+	result="$(bash -c "$args" 2>&1)"
+	local RETC="$?"
+	if test "$RETC" != 0; then
+		(exit "$RETC")
+		println "$result"
+		exit "$RETC"
+	fi
 }
