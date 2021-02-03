@@ -55,6 +55,27 @@ test ! -e "$ISO_DIR/ramdisk.img" && {
 	NO_SECONDARY_RAMDISK=true
 }
 
+# Dependencie check
+REQUIRED_UTILS=(
+	e2fsck
+	genisoimage
+	dd
+	7z
+	rsync
+	find
+	grep
+)
+for prog in "${REQUIRED_UTILS[@]}"; do
+	! command -v "$prog" 1>/dev/null && {
+		MISSING_UTILS+="$prog "
+	}
+done
+test -n "$MISSING_UTILS" && {
+	(exit 1)
+	println "Please install the following programs before using: $MISSING_UTILS"
+	exit 1
+}
+
 # Read distro config
 DISTRO_NAME="Bigdroid"
 DISTRO_VERSION="Cake"
@@ -80,8 +101,8 @@ for arg in "${@}"; do
 		--load-image)
 			mount.load
 		;;
-		--hooks-allyes)
-			export HOOKS_ALLYES=true
+		--auto-reply)
+			export AUTO_REPLY=true
 		;;
 		--load-hooks)
 			load.hooks
