@@ -126,7 +126,7 @@ function build.iso() {
 
 	# Copy cached files into iso/
 	PFUNCNAME="$FUNCNAME::cache_iso" println.cmd rsync -a "$ISO_DIR/" "$BUILD_DIR"
-	TEMP_SYSTEM_IMAGE_MOUNT="$BUILD_DIR/.systemimg_mount"
+	TEMP_SYSTEM_IMAGE_MOUNT="$TMP_DIR/build_system_mount"
 
 	# Extend system image if necessary
 	! mountpoint -q "$SYSTEM_MOUNT_DIR" && {

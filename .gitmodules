@@ -1,0 +1,3 @@
+[submodule "src/iso_common"]
+	path = src/iso_common
+	url = https://github.com/AXIM0S/advanced-android-x86-win-installer-dev
