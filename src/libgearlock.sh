@@ -7,7 +7,7 @@ set -a
 ############# 
 ############# From gearlock/bin/fetch
 ############# 
-SYSTEM_DIR="$SYSTEM_MOUNT_DIR"
+	SYSTEM_DIR="$SYSTEM_MOUNT_DIR"
 
 	RECOVERY="yes"
 	GHOME="$SYSTEM_DIR/ghome" && {
