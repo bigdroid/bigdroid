@@ -42,7 +42,7 @@ function mount.load() {
 	mount.unload
 	
 	# System image
-	println.cmd mount -o loop "$SYSTEM_IMAGE" "$SYSTEM_MOUNT_DIR"
+	PFUNCNAME="$FUNCNAME::loop_sysimg" println.cmd mount -o loop "$SYSTEM_IMAGE" "$SYSTEM_MOUNT_DIR"
 	test -e "$SYSTEM_MOUNT_DIR/system.img" && {
 		PFUNCNAME="$FUNCNAME::loop_sysimg" println.cmd mount -o loop "$SYSTEM_MOUNT_DIR/system.img" "$SYSTEM_MOUNT_DIR"
 	}
@@ -246,13 +246,16 @@ function gclone(){
 function println() {
 	local RETC="$?"
 	: "${PFUNCNAME:="$FUNCNAME"}"
+	export PFUNCNAME # Expose the function name to other intances
 	echo -e "$(date "+%F %T [$(test "$RETC" != 0 && echo "ERROR::$RETC" || echo 'INFO')]") (${0##*/}::$PFUNCNAME): $@"
 }
 
 function wipedir() {
 	local dir2wipe
 	for dir2wipe in "$@"; do
-		find "$dir2wipe" -mindepth 1 -maxdepth 1 -exec rm -r '{}' \;
+		if [ -e "$dir2wipe" ]; then
+			find "$dir2wipe" -mindepth 1 -maxdepth 1 -exec rm -r '{}' \;
+		fi
 	done
 }
 
@@ -260,7 +263,7 @@ function println.cmd() {
 	local result args
 	args=$(printf '%q ' "$@")
 	local string="$@"
-	println "Running ${string::69}..."
+	println "Running ${string:0:$((69 - ${#PFUNCNAME}))}..."
 	result="$(bash -c "$args" 2>&1)"
 	local RETC="$?"
 	if test "$RETC" != 0; then
