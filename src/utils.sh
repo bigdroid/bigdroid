@@ -155,8 +155,8 @@ function build.iso() {
 	test -n "$megs2add" && {
 		function extend.systemimg() {
 			dd if=/dev/zero bs=1M count="$megs2add" >> "$SYSTEM_IMAGE" || return
-			e2fsck -fy "$SYSTEM_IMAGE" || return
-			resize2fs "$SYSTEM_IMAGE" || return
+			e2fsck -fy "$SYSTEM_IMAGE"
+			resize2fs "$SYSTEM_IMAGE"
 		}
 		export -f extend.systemimg
 		PFUNCNAME="$FUNCNAME::extend.systemimg" println.cmd extend.systemimg
