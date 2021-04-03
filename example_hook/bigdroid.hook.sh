@@ -10,7 +10,7 @@
 #   HOOKS_DIR           % The 'hooks' dir under BASE_DIR.
 #   
 #   HOOK_BASE           % This variable points to the root-dir
-#                       % of a bigdroid every hook which is being run.
+#                       % of every bigdroid hook which is being run during their runtime.
 #   
 #   MOUNT_DIR           % The parent dir which holds other child mountpoint dirs.
 #                       % Followed by: system, secondary_ramdisk, initial_ramdisk and install_ramdisk.
