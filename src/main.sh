@@ -62,6 +62,7 @@ test ! -e "$ISO_DIR/ramdisk.img" && {
 # Dependencie check
 REQUIRED_UTILS=(
 	e2fsck
+	mksquashfs
 	genisoimage
 	dd
 	7z
