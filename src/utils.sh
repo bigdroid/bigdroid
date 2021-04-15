@@ -272,3 +272,5 @@ function println.cmd() {
 		exit "$RETC"
 	fi
 }
+
+# TODO: Create a stat holder file and a function to retrieve the status of running hook and/or wait for that hook to complete in a subprocess over another hook.

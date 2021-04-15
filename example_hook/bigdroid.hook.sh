@@ -14,8 +14,8 @@
 #   
 #   MOUNT_DIR           % The parent dir which holds other child mountpoint dirs.
 #                       % Followed by: system, secondary_ramdisk, initial_ramdisk and install_ramdisk.
-#                       % We also have MOUNT_DIR_SYSTEM, MOUNT_DIR_SECONDARY_RAMDISK
-#                       % MOUNT_DIR_INITIAL_RAMDISK and MOUNT_DIR_INSTALL_RAMDISK variables. 
+#                       % We also have SYSTEM_MOUNT_DIR, SECONDARY_RAMDISK_MOUNT_DIR
+#                       % INITIAL_RAMDISK_MOUNT_DIR and INSTALL_RAMDISK_MOUNT_DIR variables.
 #   
 #   ISO_DIR             % Your configured ISO by the '--setup-iso' argument is cached in this dir.
 #   
