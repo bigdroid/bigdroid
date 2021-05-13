@@ -25,15 +25,15 @@ function get.systemimg() {
 
 function mount.overlay() {
 	for odir in "lower" "worker"; do
-		PFUNCNAME="$FUNCNAME::wipedir" println.cmd wipedir "$OVERLAY_DIR/$odir"
+		PFUNCNAME="${FUNCNAME[0]}::wipedir" println.cmd wipedir "$OVERLAY_DIR/$odir"
 	done
-	PFUNCNAME="$FUNCNAME::invoke" println.cmd mount -t overlay overlay \
+	PFUNCNAME="${FUNCNAME[0]}::invoke" println.cmd mount -t overlay overlay \
 		-olowerdir="$SYSTEM_MOUNT_DIR",upperdir="$OVERLAY_DIR/lower",workdir="$OVERLAY_DIR/worker" "$SYSTEM_MOUNT_DIR"
 }
 
 function mount.unload() {
 	while read -r _mountpoint; do
-		PFUNCNAME="$FUNCNAME" println.cmd umount -fd "$_mountpoint"
+		PFUNCNAME="${FUNCNAME[0]}" println.cmd umount -fd "$_mountpoint"
 	done < <(mount | grep "$MOUNT_DIR" | awk '{print $3}' | sort -r)
 }
 
@@ -42,14 +42,14 @@ function mount.load() {
 	mount.unload
 	
 	# System image
-	PFUNCNAME="$FUNCNAME::loop_sysimg" println.cmd mount -o loop "$SYSTEM_IMAGE" "$SYSTEM_MOUNT_DIR"
+	PFUNCNAME="${FUNCNAME[0]}::loop_sysimg" println.cmd mount -o loop "$SYSTEM_IMAGE" "$SYSTEM_MOUNT_DIR"
 	test -e "$SYSTEM_MOUNT_DIR/system.img" && {
-		PFUNCNAME="$FUNCNAME::loop_sysimg" println.cmd mount -o loop "$SYSTEM_MOUNT_DIR/system.img" "$SYSTEM_MOUNT_DIR"
+		PFUNCNAME="${FUNCNAME[0]}::loop_sysimg" println.cmd mount -o loop "$SYSTEM_MOUNT_DIR/system.img" "$SYSTEM_MOUNT_DIR"
 	}
 	mount.overlay
 
 	# Ramdisk images
-	PFUNCNAME="$FUNCNAME::wipedir" println.cmd wipedir "$INITIAL_RAMDISK_MOUNT_DIR" "$SECONDARY_RAMDISK_MOUNT_DIR" "$INSTALL_RAMDISK_MOUNT_DIR"
+	PFUNCNAME="${FUNCNAME[0]}::wipedir" println.cmd wipedir "$INITIAL_RAMDISK_MOUNT_DIR" "$SECONDARY_RAMDISK_MOUNT_DIR" "$INSTALL_RAMDISK_MOUNT_DIR"
 	function ramdisk.extract() {
 		function main() {
 			local dir="$1"
@@ -68,7 +68,7 @@ function mount.load() {
 		}
 	}
 	export -f ramdisk.extract
-	PFUNCNAME="$FUNCNAME::extract_ramdisk" println.cmd ramdisk.extract
+	PFUNCNAME="${FUNCNAME[0]}::extract_ramdisk" println.cmd ramdisk.extract
 	unset -f ramdisk.extract
 }
 
@@ -76,44 +76,154 @@ function setup.iso() {
 	local ISO="$1"
 	# Cheanup cache dir
 	mount.unload
-	PFUNCNAME="$FUNCNAME::wipedir" println.cmd wipedir "$ISO_DIR"
-	PFUNCNAME="$FUNCNAME::extract_iso" println.cmd 7z x -o"$ISO_DIR" "$ISO"
+	PFUNCNAME="${FUNCNAME[0]}::wipedir" println.cmd wipedir "$ISO_DIR"
+	PFUNCNAME="${FUNCNAME[0]}::extract_iso" println.cmd 7z x -o"$ISO_DIR" "$ISO"
 
 	get.systemimg "$ISO_DIR"
 	if test "${SYSTEM_IMAGE##*/}" == "system.sfs"; then
-		PFUNCNAME="$FUNCNAME::extract_sfs" println.cmd 7z x -o"$ISO_DIR" "$SYSTEM_IMAGE"
-		PFUNCNAME="$FUNCNAME::remove_sfs" println.cmd rm "$SYSTEM_IMAGE"
+		PFUNCNAME="${FUNCNAME[0]}::extract_sfs" println.cmd 7z x -o"$ISO_DIR" "$SYSTEM_IMAGE"
+		PFUNCNAME="${FUNCNAME[0]}::remove_sfs" println.cmd rm "$SYSTEM_IMAGE"
 	fi
 }
 
+
+
 function load.hooks() {
+
+	function hook::fetch_path() {
+		local HOOK_NAME="$1"
+		test -z "$GENERATED_HOOKS_LIST_FILE" \
+			&& RETC=1 println "\$GENERATED_HOOKS_LIST_FILE variable is not defined" && exit 1
+
+		local HOOK_DIR
+		HOOK_DIR="$(grep -I "/.*/$HOOK_NAME/$COMMON_HOOK_FILE_NAME" "$GENERATED_HOOKS_LIST_FILE")"
+
+		if test -z "$HOOK_DIR"; then
+			RETC=1 println "Failed to fetch HOOK_DIR"
+			exit 1
+		else
+			echo "${HOOK_DIR%/*}"
+		fi
+
+	}
+
+	function hook::parse_option() {
+		local input="$1"
+		local range="${2:-1}"
+		local values
+		values=($(sed 's|,| |g' <<<"$input"))
+
+		local lines
+		for value in "${values[@]}"; do
+			lines+="$(echo -e "\n${value}")"
+		done
+
+		# If the specified range is larger than input string
+		# Then we just return the 1st line.
+		if test "$(wc -l <<<"$lines")" -lt "$range"; then
+			head -n1 <<<"$lines"
+		else
+			sed -n "${range}p" <<<"$lines"
+		fi
+	}
+
+	function hook::install() {
+		(
+			HOOK_NAME="$1"
+			# Read metadata
+			
+			source "$(hook::fetch_path "$HOOK_NAME")/bd.meta.sh" ||	{
+													r=$?
+													RETC=$r println "Failed to load $HOOK_NAME metadata"
+													exit $r
+												}
+			# Satisfy dependencies
+			for dep in "${DEPENDS[@]}"; do
+				! grep -qI "^${dep}\b" "$APPLIED_HOOKS_STAT_FILE" && {
+					hook::install "$dep"
+				}
+			done
+			
+			println "Hooking ${HOOK_NAME}"
+			chmod +x "$hook" || exit
+			if test -z "$AUTO_REPLY" \
+				|| test "$(hook::parse_option "$INTERACTIVE" 1)" == yes; then
+				bash -e "$hook" || exit
+			else
+				yes | bash -e "$hook" || exit
+			fi
+
+			# Log the installed hook on success
+			echo "$CODENAME" >> "$APPLIED_HOOKS_STAT_FILE"
+		)
+	}
+
+
+	### Starting point of the function
+	##################################
+
+	# A lazy way to assume if we have mountpoints loaded up
 	! mountpoint -q "$SYSTEM_MOUNT_DIR" && {
 		(exit 1)
 		println "You need to load-image first"
 		exit 1
 	}
-	export PFUNCNAME="$FUNCNAME"
+
+	# export PFUNCNAME="${FUNCNAME[0]}"
+	export COMMON_HOOK_FILE_NAME="bd.hook.sh"
+	export APPLIED_HOOKS_STAT_FILE="$TMP_DIR/.applied_hooks"
+	export GENERATED_HOOKS_LIST_FILE="$TMP_DIR/.generated_hooks"
+
+	# Cleanup previously created statfile if exists
+	for _file in "$APPLIED_HOOKS_STAT_FILE" "$GENERATED_HOOKS_LIST_FILE"; do
+		test -e "$_file" && {
+			rm "$_file" || exit
+		}
+	done
+
+	# Load native gearlock functions
 	source "$SRC_DIR/libgearlock.sh" || exit
+
 	println "Attaching hooks"
+
+	# Get the list of hooks
 	if test -e "${HOOKS_LIST_FILE:="$HOOKS_DIR/hooks_list.sh"}"; then
 		mapfile -t hooks < <(awk 'NF' < "$HOOKS_LIST_FILE" | sed '/#.*/d' \
-							| awk -v hook_dir="$HOOKS_DIR" \
-							'{print hook_dir "/"$0"/bigdroid.hook.sh"}')
+							| awk -v hook_dir="$HOOKS_DIR" -v file_name="$COMMON_HOOK_FILE_NAME" \
+							'{print hook_dir "/"$0"/file_name"}')
 	else
-		readarray -d '' hooks < <(find "$HOOKS_DIR" -type f -name 'bigdroid.hook.sh' -print0)
+		readarray -d '' hooks < <(find "$HOOKS_DIR" -type f -name "$COMMON_HOOK_FILE_NAME" -print0)
 	fi
+
+	# Generate the hooks list
 	for hook in "${hooks[@]}"; do
-		export HOOK_BASE="${hook%/*}"
-		println "Hooking ${HOOK_BASE##*/}"
-		chmod +x "$hook" || exit
-		if test -z "$AUTO_REPLY" || grep -q 'bigdroid.hook.noautoreply' "$hook"; then
-			bash -e "$hook" || exit
-		else
-			yes | bash -e "$hook" || exit
-		fi
-		unset HOOK_BASE
-	done 
+		echo "$hook" >> "$GENERATED_HOOKS_LIST_FILE" || exit
+	done
+
+	# Process the hooks
+	for hook in "${hooks[@]}"; do
+		hook::install "${hook##*/}"
+	done
+
+
+	# 		export HOOK_BASE="${hook%/*}"
+	# 	export HOOK_BASE_NAME="${HOOK_BASE##*/}"
+
+
+	# 	# Run the hook in a sandboxed subprocess
+	# ||	{
+	# 				r=$?
+	# 				RETC=$r println "$HOOK_BASE_NAME exited unexpectedly"
+	# 				exit $r
+	# 			}
+
+	# 	
+
+	# 	unset HOOK_BASE
+	# 	unset HOOK_BASE_NAME
+
 	unset PFUNCNAME
+	unset APPLIED_HOOKS_STAT_FILE
 }
 
 function build.iso() {
@@ -121,9 +231,15 @@ function build.iso() {
 
 	# Cleanup build dir
 	PFUNCNAME="wipedir::tmp" println.cmd wipedir "$BUILD_DIR"
+
+	# Copy extra iso files
+	# mapfile -t items < <(awk 'NF' <<<"$EXTRA_ISO_FILES")
+	for item in "${EXTRA_ISO_FILES[@]}"; do
+		rsync -a "$ISO_DIR/$item" "$BUILD_DIR" || return
+	done
 	
 	# Bring standard ISO components when required
-	for item in '.disk' 'boot' 'efi' 'isolinux' 'install.img' 'findme'; do
+	for item in '.disk' 'boot' 'efi' 'isolinux' 'install.img' 'findme' 'windows'; do
 		test ! -e "$BUILD_DIR/$item" && {
 			rsync -a "$SRC_DIR/iso_common/$item" "$BUILD_DIR" || return
 		}
@@ -131,10 +247,10 @@ function build.iso() {
 	
 	# Remove ghome dir if empty
 	test -n "$(find "$SYSTEM_MOUNT_DIR/ghome" -maxdepth 0 -empty)" && \
-		PFUNCNAME="$FUNCNAME::ghome::wipedir" println.cmd rm -r "$SYSTEM_MOUNT_DIR/ghome"
+		PFUNCNAME="${FUNCNAME[0]}::ghome::wipedir" println.cmd rm -r "$SYSTEM_MOUNT_DIR/ghome"
 
 	# Copy cached files into iso/
-	PFUNCNAME="$FUNCNAME::cache_iso" println.cmd rsync -a "$ISO_DIR/" "$BUILD_DIR"
+	PFUNCNAME="${FUNCNAME[0]}::cache_iso" println.cmd rsync -a "$ISO_DIR/" "$BUILD_DIR"
 	TEMP_SYSTEM_IMAGE_MOUNT="$TMP_DIR/build_system_mount"
 
 	# Extend system image if necessary
@@ -150,7 +266,7 @@ function build.iso() {
 	}
 
 	mountpoint -q "$TEMP_SYSTEM_IMAGE_MOUNT" && {
-		PFUNCNAME="$FUNCNAME::unmount_tmp_mp" println.cmd umount -fd "$TEMP_SYSTEM_IMAGE_MOUNT"
+		PFUNCNAME="${FUNCNAME[0]}::unmount_tmp_mp" println.cmd umount -fd "$TEMP_SYSTEM_IMAGE_MOUNT"
 	}
 	test -n "$megs2add" && {
 		function extend.systemimg() {
@@ -159,12 +275,12 @@ function build.iso() {
 			resize2fs "$SYSTEM_IMAGE"
 		}
 		export -f extend.systemimg
-		PFUNCNAME="$FUNCNAME::extend.systemimg" println.cmd extend.systemimg
+		PFUNCNAME="${FUNCNAME[0]}::extend.systemimg" println.cmd extend.systemimg
 		unset -f extend.systemimg
 	}
 
 	# Put new system image content
-	export PFUNCNAME="$FUNCNAME::create_new_system"
+	export PFUNCNAME="${FUNCNAME[0]}::create_new_system"
 	println.cmd mkdir -p "$TEMP_SYSTEM_IMAGE_MOUNT"
 	println.cmd mount -o loop "$SYSTEM_IMAGE" "$TEMP_SYSTEM_IMAGE_MOUNT"
 	println.cmd wipedir "$TEMP_SYSTEM_IMAGE_MOUNT"
@@ -179,15 +295,15 @@ function build.iso() {
 	println.cmd rm -rf "$TEMP_SYSTEM_IMAGE_MOUNT"
 	test -n "$sysimg_reduceSize" && {
 		sysimg_newSize="$(( (ORIG_SYSTEM_IMAGE_SIZE - ${sysimg_freeSpace/M/}) + 100 ))M"
-		PFUNCNAME="$FUNCNAME::reduce_system_size" println.cmd resize2fs "$SYSTEM_IMAGE" "$sysimg_newSize"
+		PFUNCNAME="${FUNCNAME[0]}::reduce_system_size" println.cmd resize2fs "$SYSTEM_IMAGE" "$sysimg_newSize"
 		e2fsck -fy "$SYSTEM_IMAGE" >/dev/null 2>&1
 	}
 	unset PFUNCNAME
 
 	# Create suqashed system image
 	test -z "$BUILD_IMG_ONLY" && {
-		PFUNCNAME="$FUNCNAME::create_sfs" println.cmd mksquashfs "$SYSTEM_IMAGE" "${SYSTEM_IMAGE%/*}/system.sfs"
-		PFUNCNAME="$FUNCNAME::remove_sysimg" println.cmd rm "$SYSTEM_IMAGE"
+		PFUNCNAME="${FUNCNAME[0]}::create_sfs" println.cmd mksquashfs "$SYSTEM_IMAGE" "${SYSTEM_IMAGE%/*}/system.sfs"
+		PFUNCNAME="${FUNCNAME[0]}::remove_sysimg" println.cmd rm "$SYSTEM_IMAGE"
 	}
 
 	# Create new ramdisk images
@@ -206,7 +322,7 @@ function build.iso() {
 		}
 	}
 	export -f ramdisk.create
-	PFUNCNAME="$FUNCNAME::create_ramdisk" println.cmd ramdisk.create
+	PFUNCNAME="${FUNCNAME[0]}::create_ramdisk" println.cmd ramdisk.create
 	unset -f ramdisk.create
 
 	# Now lets finally create an ISO image
@@ -224,7 +340,7 @@ function build.iso() {
 			)
 		}
 		export -f iso.create
-		PFUNCNAME="$FUNCNAME::create_iso" println.cmd iso.create
+		PFUNCNAME="${FUNCNAME[0]}::create_iso" println.cmd iso.create
 	}
 	:
 	
@@ -244,8 +360,10 @@ function gclone(){
 }
 
 function println() {
-	local RETC="$?"
-	: "${PFUNCNAME:="$FUNCNAME"}"
+	local RETC
+	local PFUNCNAME
+	: "${RETC:="$?"}"
+	: "${PFUNCNAME:="${FUNCNAME[0]}"}"
 	export PFUNCNAME # Expose the function name to other intances
 	echo -e "$(date "+%F %T [$(test "$RETC" != 0 && echo "ERROR::$RETC" || echo 'INFO')]") (${0##*/}::$PFUNCNAME): $@"
 }

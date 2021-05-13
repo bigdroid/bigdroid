@@ -1,0 +1,2 @@
+* An option to allow hooks to detimine after which internal bigdroid function to run.
+~~* An option to declare which additional iso/ files to copy into build/~~

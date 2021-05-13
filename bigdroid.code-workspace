@@ -37,17 +37,22 @@
 		"shellcheck.useWSL": false,
 		"files.autoGuessEncoding": true,
 		"files.associations": {
-			"**/src/**": "shellscript"
+			"**/src/**": "shellscript",
+			"**/hooks/**": "shellscript"
 		},
 		"editor.insertSpaces": false,
 		"editor.detectIndentation": false,
 		"conventionalCommits.scopes": [
 			"build-system"
-		]
+		],
+		"editor.wordWrap": "on"
 	},
 	"folders": [
 		{
-			"path": "."
+			"path": "src"
+		},
+		{
+			"path": "hooks"
 		}
 	]
 }
