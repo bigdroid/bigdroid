@@ -89,6 +89,7 @@ function setup.iso() {
 
 
 function load.hooks() {
+# TODO: Better error message
 
 	function hook::fetch_path() {
 		local HOOK_NAME="$1"
@@ -130,9 +131,16 @@ function load.hooks() {
 	function hook::install() {
 		(
 			HOOK_NAME="$1"
+			HOOK_PATH="$(hook::fetch_path "$HOOK_NAME")"
+			export HOOK_BASE="$HOOK_PATH"
+
+			# Ignore hook if necessary
+			if test -e "$HOOK_PATH/bd.ignore.sh"; then
+				exit 0
+			fi
+
 			# Read metadata
-			
-			source "$(hook::fetch_path "$HOOK_NAME")/bd.meta.sh" ||	{
+			source "$HOOK_PATH/bd.meta.sh" ||	{
 													r=$?
 													RETC=$r println "Failed to load $HOOK_NAME metadata"
 													exit $r
@@ -140,21 +148,23 @@ function load.hooks() {
 			# Satisfy dependencies
 			for dep in "${DEPENDS[@]}"; do
 				! grep -qI "^${dep}\b" "$APPLIED_HOOKS_STAT_FILE" && {
-					hook::install "$dep"
+					hook::install "$dep" || exit
 				}
 			done
 			
 			println "Hooking ${HOOK_NAME}"
-			chmod +x "$hook" || exit
+			chmod +x "$HOOK_PATH/$COMMON_HOOK_FILE_NAME" || exit
+
 			if test -z "$AUTO_REPLY" \
 				|| test "$(hook::parse_option "$INTERACTIVE" 1)" == yes; then
-				bash -e "$hook" || exit
+				bash -e "$HOOK_PATH/$COMMON_HOOK_FILE_NAME" || exit
 			else
-				yes | bash -e "$hook" || exit
+				yes | bash -e "$HOOK_PATH/$COMMON_HOOK_FILE_NAME" || exit
 			fi
 
 			# Log the installed hook on success
 			echo "$CODENAME" >> "$APPLIED_HOOKS_STAT_FILE"
+			unset HOOK_BASE
 		)
 	}
 
@@ -180,6 +190,7 @@ function load.hooks() {
 			rm "$_file" || exit
 		}
 	done
+	touch "$APPLIED_HOOKS_STAT_FILE" || exit
 
 	# Load native gearlock functions
 	source "$SRC_DIR/libgearlock.sh" || exit
@@ -202,25 +213,21 @@ function load.hooks() {
 
 	# Process the hooks
 	for hook in "${hooks[@]}"; do
-		hook::install "${hook##*/}"
+
+		hook="${hook%/*}"
+		hook="${hook##*/}"
+
+		! grep -qI "^${hook}\b" "$APPLIED_HOOKS_STAT_FILE" && {
+			hook::install "${hook}" || { 
+					r=$?
+					RETC=$r println "The last hook invoking exited unexpectedly"
+					exit $r
+				}
+		}
+
+		unset hook
+
 	done
-
-
-	# 		export HOOK_BASE="${hook%/*}"
-	# 	export HOOK_BASE_NAME="${HOOK_BASE##*/}"
-
-
-	# 	# Run the hook in a sandboxed subprocess
-	# ||	{
-	# 				r=$?
-	# 				RETC=$r println "$HOOK_BASE_NAME exited unexpectedly"
-	# 				exit $r
-	# 			}
-
-	# 	
-
-	# 	unset HOOK_BASE
-	# 	unset HOOK_BASE_NAME
 
 	unset PFUNCNAME
 	unset APPLIED_HOOKS_STAT_FILE
