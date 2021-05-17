@@ -88,6 +88,12 @@ test -e "${DISTRO_CONFIG:="$HOOKS_DIR/distro.sh"}" && {
 	source "$DISTRO_CONFIG" || exit
 }
 
+# Extra variables
+## Related with hook::
+export COMMON_HOOK_FILE_NAME="bd.hook.sh"
+export APPLIED_HOOKS_STAT_FILE="$TMP_DIR/.applied_hooks"
+export GENERATED_HOOKS_LIST_FILE="$TMP_DIR/.generated_hooks"
+
 set +a
 
 # CLAP

@@ -91,22 +91,7 @@ function setup.iso() {
 function load.hooks() {
 # TODO: Better error message
 
-	function hook::fetch_path() {
-		local HOOK_NAME="$1"
-		test -z "$GENERATED_HOOKS_LIST_FILE" \
-			&& RETC=1 println "\$GENERATED_HOOKS_LIST_FILE variable is not defined" && exit 1
 
-		local HOOK_DIR
-		HOOK_DIR="$(grep -I "/.*/$HOOK_NAME/$COMMON_HOOK_FILE_NAME" "$GENERATED_HOOKS_LIST_FILE")"
-
-		if test -z "$HOOK_DIR"; then
-			RETC=1 println "Failed to fetch HOOK_DIR"
-			exit 1
-		else
-			echo "${HOOK_DIR%/*}"
-		fi
-
-	}
 
 	function hook::parse_option() {
 		local input="$1"
@@ -140,11 +125,13 @@ function load.hooks() {
 			fi
 
 			# Read metadata
+			set -a
 			source "$HOOK_PATH/bd.meta.sh" ||	{
 													r=$?
 													RETC=$r println "Failed to load $HOOK_NAME metadata"
 													exit $r
 												}
+			set +a
 			# Satisfy dependencies
 			for dep in "${DEPENDS[@]}"; do
 				! grep -qI "^${dep}\b" "$APPLIED_HOOKS_STAT_FILE" && {
@@ -178,11 +165,6 @@ function load.hooks() {
 		println "You need to load-image first"
 		exit 1
 	}
-
-	# export PFUNCNAME="${FUNCNAME[0]}"
-	export COMMON_HOOK_FILE_NAME="bd.hook.sh"
-	export APPLIED_HOOKS_STAT_FILE="$TMP_DIR/.applied_hooks"
-	export GENERATED_HOOKS_LIST_FILE="$TMP_DIR/.generated_hooks"
 
 	# Cleanup previously created statfile if exists
 	for _file in "$APPLIED_HOOKS_STAT_FILE" "$GENERATED_HOOKS_LIST_FILE"; do
@@ -396,6 +378,31 @@ function println.cmd() {
 		println "$result"
 		exit "$RETC"
 	fi
+}
+
+function hook::fetch_path() {
+	local HOOK_NAME="$1"
+	test -z "$GENERATED_HOOKS_LIST_FILE" \
+		&& RETC=1 println "\$GENERATED_HOOKS_LIST_FILE variable is not defined" && exit 1
+
+	local HOOK_DIR
+	HOOK_DIR="$(grep -I "/.*/$HOOK_NAME/$COMMON_HOOK_FILE_NAME" "$GENERATED_HOOKS_LIST_FILE")"
+
+	if test -z "$HOOK_DIR"; then
+		RETC=1 println "Failed to fetch HOOK_DIR"
+		exit 1
+	else
+		echo "${HOOK_DIR%/*}"
+	fi
+
+}
+
+function hook::wait_until_done() {
+	local HOOK_NAME
+	test ! -e "$APPLIED_HOOKS_STAT_FILE" && return 1
+	until grep -qI "^${HOOK_NAME}\b" "$APPLIED_HOOKS_STAT_FILE"; do
+		sleep 0.2
+	done
 }
 
 # TODO: Create a stat holder file and a function to retrieve the status of running hook and/or wait for that hook to complete in a subprocess over another hook.
