@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 use utils;
 use clap;
 
@@ -97,5 +95,3 @@ function main() {
 
 	clap "$@"
 }
-
-main "$@"
