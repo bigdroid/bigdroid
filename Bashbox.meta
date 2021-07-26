@@ -1,4 +1,9 @@
 NAME="bigdroid"
+CODENAME="bigdroid"
 AUTHORS=("AXON <axonasif@gmail.com>")
-VERSION=""
-DEPENDENCIES=()
+VERSION="1.0"
+DEPENDENCIES=(
+	"std::0.1.2"
+	"argbash::0.1.0"
+)
+REPOSITORY="https://github.com/bigdroid/bigdroid"

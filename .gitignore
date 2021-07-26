@@ -5,3 +5,5 @@
 /*.iso
 /mount
 /overlay
+/target
+/src/bigdroid

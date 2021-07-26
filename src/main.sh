@@ -1,97 +1,140 @@
-use utils;
-use clap;
+use argbash::common;
+use std::term::print::*;
+use std::term::colors;
+use std::string::strip;
+use variables;
+# use utils;
+
+#####################
+### Private functions
+#####################
+use subcommand;
+
+function print_help() {
+
+
+	println::helpgen "${_self_name^^}" \
+		--short-desc "\
+Wannabe bash compiler\
+" \
+		\
+		--usage "\
+${_self_name} [OPTIONAL-OPTIONS] [SUBCOMMAND] <subcommand-arguments>\
+" \
+		\
+		--options-desc "\
+-V, --version<^>Print version info and exit
+-v, --verbose<^>Use very verbose output
+-q, --quiet<^>No output printed to stdout
+--offline<^>Run without checking for update
+-h, --help<^>Prints this help information\
+" \
+		\
+		--subcommands "\
+new<^>${SUBCOMMANDS_DESC[1]}
+build<^>${SUBCOMMANDS_DESC[2]}
+clean<^>${SUBCOMMANDS_DESC[3]}
+install<^>${SUBCOMMANDS_DESC[4]}
+selfinstall<^>${SUBCOMMANDS_DESC[5]}\
+" \
+		\
+		--footer-msg "\
+Try '${_self_name} <subcommand> --help' for more information on a specific command.
+For bugreports: $REPOSITORY\
+";
+
+}
 
 function main() {
-	set -a
+	#####################
+	### Initialization
+	#####################
+	### Constants
+	# GCOMM="gearlock"
+	# PS3="$(echo -e "\nEnter a number >> ")"
+	readonly VERSION="0.1.0";
 
-	###
-	# Ensure we are ROOOOOOT
-	###
-	test "$(whoami)" != "root" && {
-		(exit 1)
-		PFUNCNAME="root_check" println "Please run as root user"
-		exit 1
+	### Mutables
+	_self_name="${___self##*/}";
+	_arg_verbose=off;
+	_arg_quiet=off;
+	_arg_offline=off;
+
+	#####################
+	### Start of arg parse
+	#####################
+
+	# Assign optional parent arguments
+	# Drop/escape optional parent arguments
+	# TODO: Needs review and improvement
+	for _arg in "${@}"; do {
+		# Doesnt contain `--`` and is a whole word with leading `-`
+		if test "$_arg" != "--" && grep -E '\-\w+' <<<"$_arg" 1>/dev/null; then {
+			case "$_arg" in
+				# --)
+				# 	break;
+				# 	;;
+				--verbose | -v)
+					_arg_verbose=on;
+					;;
+				--quiet | -q)
+					_arg_quiet=on;
+					;;
+				--offline)
+					_arg_offline=on;
+					;;
+				--version | -V)
+					echo "$VERSION";
+					exit 0;
+					;;
+				--help | -h*)
+					print_help && exit 0;
+					;;
+			esac
+			shift;
+		} else {
+			break;
+		} fi
+	} done
+	unset _arg;
+
+	# for i in $(
+	# 	a=$#;
+	# 	until test $a -eq 0; do
+	# 		echo $a;
+	# 		((a--));
+	# 	done
+	# ); do {
+	# 	echo "$i"
+	# 	eval "echo \$$i" | grep -E 'verbose|quiet|offline' 1>/dev/null && {
+	# 		set -- "${@:1:$i-1}" "${@:$i+1}";
+	# 	}
+	# } done
+	# unset i;
+	# TODO(LESSON): Dynamic argument parsing on bash is a nightmare. Well, at least for me on this script.
+
+	#####################
+	### Setup options
+	#####################
+	## Verbose
+	test "$_arg_verbose" == on && test "$_arg_quiet" == off && {
+		set -x;
 	}
 
-	###
-	# Define variables and set them up
-	###
-	SRC_DIR="$(dirname "$(readlink -f "$0")")"
-	BASE_DIR="$(readlink -f "${0%/*}")"
-	PATH="$BASE_DIR/bin:$PATH"
-	HOOKS_DIR="$BASE_DIR/hooks" && {
-		PFUNCNAME="hook_dir" println.cmd mkdir -p "$HOOKS_DIR"
-		chmod -f 777 "$HOOKS_DIR"
-	}
+	#####################
+	### Main execution
+	#####################
+	_subcommand_argv="${1:-}" && shift || true;
+	case "$_subcommand_argv" in
+		new | run | build | clean | install | selfinstall)
+			subcommand::$_subcommand_argv "$@";
+			;;
+		*)
+			test -n "$_subcommand_argv" && println::warn "Unknown subcommand: $_subcommand_argv";
+			print_help;
+			test -n "$_subcommand_argv" && exit 1 || exit 0;
+			;;
+	esac
 
-	MOUNT_DIR="$BASE_DIR/mount" && {
-		for _dir in system secondary_ramdisk initial_ramdisk install_ramdisk; do
-			PFUNCNAME="mount_dir" println.cmd mkdir -p "$MOUNT_DIR/$_dir" && chmod 755 "$MOUNT_DIR/$_dir"
-			eval "${_dir^^}_MOUNT_DIR=\"$MOUNT_DIR/$_dir\""
-		done
-	}
-
-	ISO_DIR="$BASE_DIR/iso" && {
-		PFUNCNAME="create::iso_dir" println.cmd mkdir -p "$ISO_DIR" && chmod 755 "$ISO_DIR"
-	}
-
-	BUILD_DIR="$BASE_DIR/build" && {
-		PFUNCNAME="create::build_dir" println.cmd mkdir -p "$BUILD_DIR"
-	}
-
-	TMP_DIR="$BASE_DIR/tmp" && {
-		PFUNCNAME="create::tmp_dir" println.cmd mkdir -p "$TMP_DIR"
-	}
-
-	OVERLAY_DIR="$BASE_DIR/overlay" && {
-		export PFUNCNAME="overlay_dir"
-		println.cmd mkdir -p "$OVERLAY_DIR"
-		for odir in lower worker; do
-			println.cmd mkdir -p "$OVERLAY_DIR/$odir" && chmod 755 "$OVERLAY_DIR/$odir"
-		done
-		unset PFUNCNAME
-	}
-
-	test ! -e "$ISO_DIR/ramdisk.img" && {
-		NO_SECONDARY_RAMDISK=true
-	}
-
-	# Dependencie check
-	REQUIRED_UTILS=(
-		e2fsck
-		mksquashfs
-		genisoimage
-		dd
-		7z
-		rsync
-		find
-		grep
-	)
-	for prog in "${REQUIRED_UTILS[@]}"; do
-		! command -v "$prog" 1>/dev/null && {
-			MISSING_UTILS+="$prog "
-		}
-	done
-	test -n "$MISSING_UTILS" && {
-		(exit 1)
-		println "Please install the following programs before using: $MISSING_UTILS"
-		exit 1
-	}
-
-	# Read distro config
-	DISTRO_NAME="Bigdroid"
-	DISTRO_VERSION="Cake"
-	test -e "${DISTRO_CONFIG:="$HOOKS_DIR/distro.sh"}" && {
-		source "$DISTRO_CONFIG" || exit
-	}
-
-	# Extra variables
-	## Related with hook::
-	export COMMON_HOOK_FILE_NAME="bd.hook.sh"
-	export APPLIED_HOOKS_STAT_FILE="$TMP_DIR/.applied_hooks"
-	export GENERATED_HOOKS_LIST_FILE="$TMP_DIR/.generated_hooks"
-
-	set +a
-
-	clap "$@"
+	exit;
 }
