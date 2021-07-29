@@ -39,18 +39,22 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 	source "$_bigdroid_meta_file";
 
 	# Fetch for source image
+	if test -z "$IMAGE"; then {
+		log::error "IMAGE metadata is empty in $_bigdroid_meta_name" 1 || exit;
+	} fi
 	case "$IMAGE" in
 		http*://*)
 			local _image_local_path="$_bigdroid_imagedir/${IMAGE##*/}";
 			if test ! -e "$_input_local_path"; then {
 				# Download image
-				println::info "Downloading remote image ${IMAGE##*/}";
+				log::info "Downloading remote image ${IMAGE##*/}";
 				wget -c -O "$_image_local_path" "$IMAGE";
 				# Verify checksum
-				println::info "Verifying checksum of ${_image_local_path##*/}";
-				local _local_image_checksum="$(rstrip "$(sha256sum "$_image_local_path")" " *")";
+				log::info "Verifying checksum of ${_image_local_path##*/}";
+				local _local_image_checksum;
+				_local_image_checksum="$(rstrip "$(sha256sum "$_image_local_path")" " *")";
 				if test "$_local_image_checksum" != "$IMAGE_CHECKSUM"; then {
-					println::error "Checksum mismatch, can not continue";
+					log::error "Checksum mismatch, can not continue" 1 || exit;
 				} fi
 			} fi
 		;;
@@ -63,7 +67,7 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 
 	# Resolve hooks
 	for _hook in "${HOOKS[@]}"; do {
-		# Install hook if not present
+		# Install hook if not presesnt
 		subcommand::hook install "$_hook";
 
 		# Inject hooks

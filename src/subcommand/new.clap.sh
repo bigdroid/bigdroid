@@ -51,7 +51,7 @@ parse_commandline()
 		_key="$1"
 		case "$_key" in
 			--name)
-				test $# -lt 2 && println::error "Missing value for the optional argument '$_key'." 1
+				test $# -lt 2 && log::error "Missing value for the optional argument '$_key'." 1 || exit;
 				_arg_name="$2"
 				shift
 				;;
@@ -59,7 +59,7 @@ parse_commandline()
 				_arg_name="${_key##--name=}"
 				;;
 			--codename)
-				test $# -lt 2 && println::error "Missing value for the optional argument '$_key'." 1
+				test $# -lt 2 && log::error "Missing value for the optional argument '$_key'." 1 || exit;
 				_arg_codename="$2"
 				shift
 				;;
@@ -67,7 +67,7 @@ parse_commandline()
 				_arg_codename="${_key##--codename=}"
 				;;
 			--version)
-				test $# -lt 2 && println::error "Missing value for the optional argument '$_key'." 1
+				test $# -lt 2 && log::error "Missing value for the optional argument '$_key'." 1 || exit;
 				_arg_version="$2"
 				shift
 				;;
@@ -75,7 +75,7 @@ parse_commandline()
 				_arg_version="${_key##--version=}"
 				;;
 			--image)
-				test $# -lt 2 && println::error "Missing value for the optional argument '$_key'." 1
+				test $# -lt 2 && log::error "Missing value for the optional argument '$_key'." 1 || exit;
 				_arg_image="$2"
 				shift
 				;;
@@ -83,7 +83,7 @@ parse_commandline()
 				_arg_image="${_key##--image=}"
 				;;
 			--homepage)
-				test $# -lt 2 && println::error "Missing value for the optional argument '$_key'." 1
+				test $# -lt 2 && log::error "Missing value for the optional argument '$_key'." 1 || exit;
 				_arg_homepage="$2"
 				shift
 				;;
@@ -91,7 +91,7 @@ parse_commandline()
 				_arg_homepage="${_key##--homepage=}"
 				;;
 			--repository)
-				test $# -lt 2 && println::error "Missing value for the optional argument '$_key'." 1
+				test $# -lt 2 && log::error "Missing value for the optional argument '$_key'." 1 || exit;
 				_arg_repository="$2"
 				shift
 				;;
@@ -99,7 +99,7 @@ parse_commandline()
 				_arg_repository="${_key##--repository=}"
 				;;
 			--bugreport)
-				test $# -lt 2 && println::error "Missing value for the optional argument '$_key'." 1
+				test $# -lt 2 && log::error "Missing value for the optional argument '$_key'." 1 || exit;
 				_arg_bugreport="$2"
 				shift
 				;;
@@ -128,8 +128,8 @@ parse_commandline()
 handle_passed_args_count()
 {
 	local _required_args_string="'path'"
-	test "${_positionals_count}" -ge 1 || _PRINT_HELP=yes println::error "FATAL ERROR: Not enough positional arguments - we require exactly 1 (namely: $_required_args_string), but got only ${_positionals_count}." 1
-	test "${_positionals_count}" -le 1 || _PRINT_HELP=yes println::error "FATAL ERROR: There were spurious positional arguments --- we expect exactly 1 (namely: $_required_args_string), but got ${_positionals_count} (the last one was: '${_last_positional}')." 1
+	test "${_positionals_count}" -ge 1 || log::error "Not enough positional arguments - we require exactly 1 (namely: $_required_args_string), but got only ${_positionals_count}." 1 || exit;
+	test "${_positionals_count}" -le 1 || log::error "There were spurious positional arguments --- we expect exactly 1 (namely: $_required_args_string), but got ${_positionals_count} (the last one was: '${_last_positional}')." 1 || exit;
 }
 
 
@@ -142,7 +142,7 @@ assign_positional_args()
 	for _positional_name in ${_positional_names}
 	do
 		test $# -gt 0 || break
-		eval "$_positional_name=\${1}" || println::error "Error during argument parsing, possibly an Argbash bug." 1
+		eval "$_positional_name=\${1}" || log::error "Error during argument parsing, possibly an Argbash bug." 1 || exit;
 		shift
 	done
 }

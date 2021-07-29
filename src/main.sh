@@ -1,5 +1,6 @@
 use argbash::common;
-use std::term::print::*;
+use std::print::log;
+use std::print::helpgen;
 use std::term::colors;
 use std::string::strip;
 use variables;
@@ -130,7 +131,7 @@ function main() {
 			subcommand::$_subcommand_argv "$@";
 			;;
 		*)
-			test -n "$_subcommand_argv" && println::warn "Unknown subcommand: $_subcommand_argv";
+			test -n "$_subcommand_argv" && log::warn "Unknown subcommand: $_subcommand_argv";
 			print_help;
 			test -n "$_subcommand_argv" && exit 1 || exit 0;
 			;;
