@@ -1,6 +1,7 @@
 use new;
 # use install;
-# use build;
+use hook;
+use build;
 # use run;
 # use selfinstall;
 # use clean;

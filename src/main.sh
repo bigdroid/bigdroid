@@ -3,6 +3,8 @@ use std::print::log;
 use std::print::helpgen;
 use std::term::colors;
 use std::string::strip;
+use std::string::trim;
+use std::string::matches;
 use variables;
 # use utils;
 
@@ -50,10 +52,6 @@ function main() {
 	#####################
 	### Initialization
 	#####################
-	### Constants
-	# GCOMM="gearlock"
-	# PS3="$(echo -e "\nEnter a number >> ")"
-	readonly VERSION="0.1.0";
 
 	### Mutables
 	_self_name="${___self##*/}";
@@ -127,7 +125,7 @@ function main() {
 	#####################
 	_subcommand_argv="${1:-}" && shift || true;
 	case "$_subcommand_argv" in
-		new | run | build | clean | install | selfinstall)
+		new | build | clean | hook)
 			subcommand::$_subcommand_argv "$@";
 			;;
 		*)

@@ -119,7 +119,7 @@ function gettop() {
 
 : "${_arg_path:="$PWD"}";
 _arg_path="$(readlink -f "$_arg_path")"; # Pull full path
-if test ! -d "$_arg_path/$_src_dir_name" || test ! -e "$_arg_path/$_bigdroid_meta_name"; then {
+if test ! -e "$_arg_path/$_bigdroid_meta_name"; then {
 	_top="$(gettop)";
 	if test -n "$_top"; then {
 		_arg_path="$_top";

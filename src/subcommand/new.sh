@@ -24,7 +24,7 @@ function subcommand::new()
 			case "$_arg_image" in
 				http*://*)
 					local _image_local_path="$_bigdroid_imagedir/${_arg_image##*/}";
-					if test ! -e "$_input_local_path"; then {
+					if test ! -e "$_image_local_path"; then {
 						log::info "Downloading remote image ${_arg_image##*/}";
 						wget -c -O "$_image_local_path" "$_arg_image";
 					} fi
