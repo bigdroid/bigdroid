@@ -43,7 +43,7 @@ selfinstall<^>${SUBCOMMANDS_DESC[5]}\
 		\
 		--footer-msg "\
 Try '${_self_name} <subcommand> --help' for more information on a specific command.
-For bugreports: $REPOSITORY\
+For bugreports: $___self_REPOSITORY\
 ";
 
 }
@@ -56,6 +56,7 @@ function main() {
 	### Mutables
 	_self_name="${___self##*/}";
 	_arg_verbose=off;
+	_arg_no_verbose=off;
 	_arg_quiet=off;
 	_arg_offline=off;
 
@@ -70,11 +71,14 @@ function main() {
 		# Doesnt contain `--`` and is a whole word with leading `-`
 		if test "$_arg" != "--" && grep -E '\-\w+' <<<"$_arg" 1>/dev/null; then {
 			case "$_arg" in
-				# --)
-				# 	break;
-				# 	;;
+				--)
+					break;
+					;;
 				--verbose | -v)
 					_arg_verbose=on;
+					;;
+				--no-verbose | -nv)
+					_arg_no_verbose=on;
 					;;
 				--quiet | -q)
 					_arg_quiet=on;
@@ -83,7 +87,7 @@ function main() {
 					_arg_offline=on;
 					;;
 				--version | -V)
-					echo "$VERSION";
+					echo "$___self_VERSION";
 					exit 0;
 					;;
 				--help | -h*)

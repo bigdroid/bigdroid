@@ -122,9 +122,9 @@ function subcommand::hook() {
 					} fi
 				}
 				
-				# When is a 8char short hash
+				# When is a short/long hash
 				if is_short_hash "$_tag_name"; then {
-					if test "$(git -c core.abbrev=8 -C "$_hook_dir" rev-parse --short HEAD)" != "$_tag_name"; then {
+					if test "$(git -C "$_hook_dir" rev-parse HEAD)" != "$(git -C "$_hook_dir" rev-parse "$_tag_name")"; then {
 						checkout_commit "$_hook_dir" "$_tag_name";
 					} fi
 				} else { # When is friendly tag name
