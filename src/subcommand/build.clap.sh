@@ -14,6 +14,8 @@ _arg_path=;
 _arg_debug="off";
 _arg_release="off";
 _arg_run="off";
+_arg_hooks_only="off";
+_arg_reply_yes="off";
 
 parse_commandline()
 {
@@ -29,6 +31,12 @@ parse_commandline()
 				;;
 			--run)
 				_arg_run="on";
+				;;
+			--hooks-only)
+				_arg_hooks_only="on";
+				;;
+			--reply-yes)
+				_arg_reply_yes="on";
 				;;
 			--help)
 				print_help && exit 0;

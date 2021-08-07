@@ -39,31 +39,35 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 	# (
 
 		### Load the project metadata
+		unset NAME CODENAME VERSION AUTHORS IMAGE HOOKS REPOSITORY HOMEPAGE BUGREPORT TAGS;
 		source "$_bigdroid_meta_file";
-
 		### Fetch for source image
-		if test -z "$IMAGE"; then {
+		if ! test -v IMAGE || test -z "${IMAGE:-}"; then {
 			log::error "IMAGE metadata is empty in $_bigdroid_meta_name" 1 || exit;
+		} else {
+			local _image_source _image_checksum;
+			IFS='|' read -r _image_source _image_checksum <<<"${IMAGE//::/|}";
 		} fi
-		case "$IMAGE" in
+
+		case "$_image_source" in
 			http*://*)
-				local _local_image_path="$_bigdroid_imagedir/${IMAGE##*/}";
+				local _local_image_path="$_bigdroid_imagedir/${_image_source##*/}";
 				if test ! -e "$_local_image_path"; then {
 					# Download image
-					log::info "Downloading remote image ${IMAGE##*/}";
-					wget -c -O "$_local_image_path" "$IMAGE";
+					log::info "Downloading remote image ${_image_source##*/}";
+					wget -c -O "$_local_image_path" "$_image_source";
 					# Verify checksum
 					log::info "Verifying checksum of ${_local_image_path##*/}";
 					local _local_image_checksum;
 					_local_image_checksum="$(rstrip "$(sha256sum "$_local_image_path")" " *")";
-					if test "$_local_image_checksum" != "$IMAGE_CHECKSUM"; then {
+					if test "$_local_image_checksum" != "$_image_checksum"; then {
 						log::error "Checksum mismatch, can not continue" 1 || exit;
 					} fi
 				} fi
 			;;
 			
 			*)
-				local _local_image_path="$IMAGE";
+				local _local_image_path="$_image_source";
 			;;
 		esac
 		
@@ -144,6 +148,14 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 		# } done
 
 	# )	
+	
+
+	# Check if hooks only
+	if test "$_arg_hooks_only" == "on"; then {
+		log::info "Terminating the process without building ISO, only loaded hooks";
+		exit 0;
+	} fi
+
 	# The later build process.....
 	# TODO.....
 

@@ -71,7 +71,15 @@ function mount::overlayFor() {
 
 	log::cmd wipedir "$_overlay_dir_node";
 	mkdir -p "$_overlay_dir_node" "$_overlay_dir_node/lower" "$_overlay_dir_node/worker";
-	log::cmd sudo mount -t overlay overlay \
-		-olowerdir="$_for",upperdir="$_overlay_dir_node/lower",workdir="$_overlay_dir_node/worker" "$_for";
+	log::cmd sudo mount -t overlay overlay -olowerdir="$_for",upperdir="$_overlay_dir_node/lower",workdir="$_overlay_dir_node/worker" "$_for";
+}
+
+function mount::overlay() {
+	local _upper="$1";
+	local _lower="$2";
+	local _overlay_dir_node="$_overlay_dir/${_upper##*/}";
+	log::cmd wipedir "$_overlay_dir_node";
+	mkdir -p "$_overlay_dir_node/worker";
+	log::cmd sudo mount -t overlay overlay -olowerdir="$_lower",upperdir="$_upper",workdir="$_overlay_dir_node/worker" "$_lower";
 }
 set +a;
