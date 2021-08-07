@@ -3,6 +3,7 @@ readonly _bigdroid_home="${HOME:-"${0%/*}"}/.bigdroid" && mkdir -p "$_bigdroid_h
 readonly _bigdroid_registrydir="$_bigdroid_home/registry" && mkdir -p "$_bigdroid_registrydir";
 readonly _bigdroid_imagedir="$_bigdroid_home/image" && mkdir -p "$_bigdroid_imagedir";
 readonly _bigdroid_isocommon_dir="$_bigdroid_home/iso_common";
+readonly _bigdroid_common_hook_file_name="bd.hook.sh";
 
 readonly _build_dir_name="build";
 readonly _hooks_dir_name="hooks";

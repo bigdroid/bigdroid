@@ -56,6 +56,7 @@ function hook::install() {
 					} else {
 						log::error "Okay then you may resolve the issue manually and rerun the build" 1 || exit;
 					} fi
+					unset _user_keypress;
 				} fi
 			}
 			
@@ -76,13 +77,24 @@ function hook::install() {
 			# 		checkout_commit "$_hook_dir" "$_tag_name";
 			# 	} fi
 			# } fi
+			
+
+			### Check for repository integrity
+			local _hook_repo_status_dump;
+			_hook_repo_status_dump="$(git -C "$_hook_dir" status --porcelain)";
+
+			if string::matches "$_hook_repo_status_dump" '^\ [D|M]'; then {
+				log::warn "${_repo_source} seems to be dirty, do you want to hard reset it? [Y/n] \c";
+				local _user_keypress && read -n1 -r _user_keypress && echo;
+				if test "${_user_keypress,,}" == "y"; then {
+					git -C "$_hook_dir" reset --hard;
+				} else {
+					log::error "Okay then you may resolve the issue manually and rerun the build" 1 || exit;
+				} fi
+				unset _user_keypress;
+			} fi
+
 		} fi
-
-
-	# Perform inject operation
-	if test "$_argv" == "inject"; then {
-		:	
-	} fi
 
 	} done
 }
