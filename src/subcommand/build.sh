@@ -247,6 +247,7 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 
 		(
 			OUTPUT_ISO="$_target_workdir/${CODENAME}_${VERSION}.iso";
+			rm -f "$OUTPUT_ISO";
 			cd "$_src_dir";
 			log::rootcmd rm -rf "$_src_dir/"'[BOOT]';
 			log::rootcmd find "$_src_dir" -type f -name 'TRANS.TBL' -delete;
