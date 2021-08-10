@@ -75,7 +75,7 @@ function mount::umountTree() {
 	if test -n "$_mountdump"; then {
 		while read -r _mountpoint; do
 			log::rootcmd umount -fd "$_mountpoint";
-		done < <(mount | grep "$_tree" | awk '{print $3}' | tac)
+		done < <(mount | grep "$_tree" | awk -F ' on ' '{print $2}' | awk '{print $1}' | tac)
 	} fi
 }
 
