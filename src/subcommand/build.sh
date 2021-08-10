@@ -257,5 +257,7 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 		)
 
 	} fi
+
+	log::info "$CODENAME was successfully built in $_build_variant mode";
 	
 }
