@@ -9,8 +9,6 @@
 
 function log::cmd() {
 	local _result;
-	local _result_retcode=0;
-	
 	local _string="$@";
 	# args=$(printf '%q ' "$@")
 	# local string="$@"
@@ -19,11 +17,18 @@ function log::cmd() {
 		log::info "Running ${_string::69}...";
 	} fi
 	# result="$(bash -c "$args" 2>&1)"
-	_result="$("$@" 2>&1)" || _result_retcode=$?;
+	if ! test -v ROOT; then {
+		_result="$("$@" 2>&1)" || _result_retcode=$?;
+	} else {
+		_result="$(sudo "$@" 2>&1)" || _result_retcode=$?;
+	} fi
 
-	if test "$_result_retcode" != 0; then {
-		log::error "${_string} exited with errorcode ${_result_retcode}\n$_result" $_result_retcode || exit;
+	if test "${_result_retcode:=0}" != 0; then {
+		log::error "${_string} exited with errorcode ${_result_retcode}\n$_result" $_result_retcode || process::self::exit;
 	} fi
 	
-}
+};
 
+function log::rootcmd() {
+	ROOT="true" log::cmd "$@"
+}

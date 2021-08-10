@@ -78,7 +78,7 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 		case "${_local_image_path##*.}" in
 			"iso")
 				log::info "Mounting IMAGE in RO mode";
-				log::cmd sudo mount -oro,loop "$_local_image_path" "$_src_dir";
+				log::rootcmd mount -oro,loop "$_local_image_path" "$_src_dir";
 			;;
 
 			*)
@@ -128,9 +128,9 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 			log::error "No SYSTEM_IMAGE was found in src/" 1 || exit;
 		} fi
 
-		log::cmd sudo mount -oro,loop "$SYSTEM_IMAGE" "$SYSTEM_MOUNT_DIR";
+		log::rootcmd mount -oro,loop "$SYSTEM_IMAGE" "$SYSTEM_MOUNT_DIR";
 		if test -e "$SYSTEM_MOUNT_DIR/system.img"; then {
-			log::cmd sudo mount -oro,loop "$SYSTEM_MOUNT_DIR/system.img" "$SYSTEM_MOUNT_DIR";
+			log::rootcmd mount -oro,loop "$SYSTEM_MOUNT_DIR/system.img" "$SYSTEM_MOUNT_DIR";
 		} fi
 		mount::overlayFor "$SYSTEM_MOUNT_DIR";
 
@@ -140,8 +140,8 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 		### Inject hooks
 		# for _hook in "${HOOKS[@]}"; do {
 			# Install hook if not presesnt
-		subcommand::hook install "${HOOKS[@]}";
-		# subcommand::hook inject "${HOOKS[@]}";
+		subcommand::hook install "${_subcommand_hook_args[@]}" "${HOOKS[@]}";
+		subcommand::hook inject "${_subcommand_hook_args[@]}" "${HOOKS[@]}";
 
 			# Inject hooks
 			# TODO....

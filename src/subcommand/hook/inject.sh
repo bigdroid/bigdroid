@@ -2,17 +2,21 @@ function hook::inject() {
 
 	function inject::run_script() {
 		local _script="$1";
-		bash -eEuT -o pipefail \
+		sudo -E bash -eEuT -o pipefail \
 			-O expand_aliases -O expand_aliases \
 				"$_script" || {
 								local _r=$?;
 								log::error "${_hook_dir##*/} exited with error code $_r" $_r || exit;
 							}
+		echo "${_script%/*}" >> "$_applied_hooks_statfile";		
 	}
 
 	local _hook;
 	for _hook in "${@}"; do {
-		internal::escapeRunArgs "$_hook";
+		
+		if [[ "$_hook" =~ ^-- ]]; then {
+			continue;
+		} fi
 
 		local _hook_dir;
 		IFS='|' read -r _ _ _ _ _hook_dir <<<"$(hook::parsemeta "$_hook")";
@@ -28,7 +32,7 @@ function hook::inject() {
 			use box::libgearlock;
 
 			set -a
-			source "$_hook_dir/bd.meta.sh" || log::error "Failed to load ${_hook_dir##*/} metadata" 1 || exit;
+			source "$_hook_dir/bd.meta.sh" || log::error "Failed to load ${_hook_dir##*/} metadata" 1 || process::self::exit;
 			set +a
 
 			# Satisfy dependencies
@@ -37,7 +41,7 @@ function hook::inject() {
 			done
 			
 			log::info "Hooking ${_hook_dir##*/}";
-			chmod +x "$_hook_dir/bd.hook.sh";
+			chmod +x "$_hook_dir/$_bigdroid_common_hook_file_name";
 
 			if test "$_arg_reply_yes" != "on" && test "${INTERACTIVE:-}" != "true"; then
 				inject::run_script "$_hook_dir/$_bigdroid_common_hook_file_name";
@@ -89,29 +93,25 @@ function hook::inject() {
 #######################
 #######################
 
+set -a;
 function hook::fetch_path() {
-	local HOOK_NAME="$1"
-	test -z "$GENERATED_HOOKS_LIST_FILE" \
-		&& RETC=1 println "\$GENERATED_HOOKS_LIST_FILE variable is not defined" && exit 1
+	local _hook="$1";
+	local _hook_dir;
+	IFS='|' read -r _ _ _ _ _hook_dir <<<"$(hook::parsemeta "$_hook")";
 
-	local HOOK_DIR
-	HOOK_DIR="$(grep -I "/.*/$HOOK_NAME/$COMMON_HOOK_FILE_NAME" "$GENERATED_HOOKS_LIST_FILE")"
-
-	if test -z "$HOOK_DIR"; then
-		RETC=1 println "Failed to fetch HOOK_DIR"
-		exit 1
-	else
-		echo "${HOOK_DIR%/*}"
-	fi
-
+	echo "$_hook_dir"; # Return value
 }
 
 function hook::wait_until_done() {
-	local HOOK_NAME
-	test ! -e "$APPLIED_HOOKS_STAT_FILE" && return 1
-	until grep -qI "^${HOOK_NAME}\b" "$APPLIED_HOOKS_STAT_FILE"; do
-		sleep 0.2
-	done
+
+	local _hook="$1";
+	local _hook_dir;
+	IFS='|' read -r _ _ _ _ _hook_dir <<<"$(hook::parsemeta "${_hook}")";
+	until grep -qI "^${_hook_dir}$" "$_applied_hooks_statfile"; do {
+		sleep 0.2;
+	} done
+
 }
+set +a;
 
 # TODO: Create a stat holder file and a function to retrieve the status of running hook and/or wait for that hook to complete in a subprocess over another hook.

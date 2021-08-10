@@ -24,7 +24,6 @@ function subcommand::hook() {
 	} done
 	unset _arg_eval;
 
-
 	function is_short_hash() {
 		local _input="$1";
 		if string::matches "$_input" '[+-]?([0-9]*[.])[0-9]+'; then {
@@ -34,12 +33,6 @@ function subcommand::hook() {
 		} fi
 	}
 
-	function internal::escapeRunArgs() {
-		local _arg="$1";
-		if [[ "$_arg" =~ ^-- ]]; then {
-			continue;
-		} fi
-	}
 	local _argv="$1" && shift;
 	case "$_argv" in
 		install | remove | inject | list)

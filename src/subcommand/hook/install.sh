@@ -2,8 +2,10 @@ function hook::install() {
 	
 	local _hook;
 	for _hook in "${@}"; do {	
-
-		internal::escapeRunArgs "$_hook";
+		
+		if [[ "$_hook" =~ ^-- ]]; then {
+			continue;
+		} fi
 
 		local _repo_source _branch_name _tag_name _repo_url _hook_dir
 		IFS='|' read -r _repo_source _branch_name _tag_name _repo_url _hook_dir <<<"$(hook::parsemeta "$_hook")";

@@ -47,7 +47,7 @@ function wipedir() {
 	local dir2wipe
 	for dir2wipe in "$@"; do
 		if [ -e "$dir2wipe" ]; then
-			sudo find "$dir2wipe" -mindepth 1 -maxdepth 1 -exec rm -r '{}' \;
+			log::rootcmd find "$dir2wipe" -mindepth 1 -maxdepth 1 -exec rm -r '{}' \;
 		fi
 	done
 }
@@ -60,7 +60,7 @@ function mount::umountTree() {
 	_mountdump="$(mount | grep "$_tree" || true)";
 	if test -n "$_mountdump"; then {
 		while read -r _mountpoint; do
-			log::cmd sudo umount -fd "$_mountpoint";
+			log::rootcmd umount -fd "$_mountpoint";
 		done < <(mount | grep "$_tree" | awk '{print $3}' | tac)
 	} fi
 }
@@ -71,7 +71,7 @@ function mount::overlayFor() {
 
 	log::cmd wipedir "$_overlay_dir_node";
 	mkdir -p "$_overlay_dir_node" "$_overlay_dir_node/lower" "$_overlay_dir_node/worker";
-	log::cmd sudo mount -t overlay overlay -olowerdir="$_for",upperdir="$_overlay_dir_node/lower",workdir="$_overlay_dir_node/worker" "$_for";
+	log::rootcmd mount -t overlay overlay -olowerdir="$_for",upperdir="$_overlay_dir_node/lower",workdir="$_overlay_dir_node/worker" "$_for";
 }
 
 function mount::overlay() {
@@ -80,6 +80,6 @@ function mount::overlay() {
 	local _overlay_dir_node="$_overlay_dir/${_upper##*/}";
 	log::cmd wipedir "$_overlay_dir_node";
 	mkdir -p "$_overlay_dir_node/worker";
-	log::cmd sudo mount -t overlay overlay -olowerdir="$_lower",upperdir="$_upper",workdir="$_overlay_dir_node/worker" "$_lower";
+	log::rootcmd mount -t overlay overlay -olowerdir="$_lower",upperdir="$_upper",workdir="$_overlay_dir_node/worker" "$_lower";
 }
 set +a;

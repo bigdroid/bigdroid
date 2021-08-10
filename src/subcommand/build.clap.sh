@@ -7,8 +7,23 @@
 # ARGBASH_GO()
 # needed because of Argbash --> m4_ignore([
 
+# ENSURE ROOT
+if ! sudo -nv 2>/dev/null; then {
+	log::warn "Build command needs root for some operations, reqesting root...";
+	sudo -v || process::self::exit;
+	
+	# Perserve the root access
+	(
+		while sleep 60 && test -e "/proc/$___self_PID"; do {
+			sudo -v;
+		} done
+	) &
+} fi
+
+
 # THE DEFAULTS INITIALIZATION - POSITIONALS
 _positionals=();
+_subcommand_hook_args=();
 _arg_path=;
 # THE DEFAULTS INITIALIZATION - OPTIONALS
 _arg_debug="off";
@@ -40,6 +55,9 @@ parse_commandline()
 				;;
 			--help)
 				print_help && exit 0;
+				;;
+			--dev|--force)
+				_subcommand_hook_args+=("$_key"); # For subcommand::hook()
 				;;
 			--) # Do not parse anymore if _run_target_args are found.
 				return 0;
@@ -160,6 +178,7 @@ readonly _build_variant;
 readonly _target_workdir="$_target_dir/$_build_variant";
 readonly _build_dir="$_target_workdir/build";
 readonly _tmp_dir="$_target_workdir/$_tmp_dir_name" && mkdir -p "$_tmp_dir";
+export _applied_hooks_statfile="$_tmp_dir/.applied_hooks" && echo > "$_applied_hooks_statfile";
 
 ### Create mount dirs
 for _mdir in system initial_ramdisk install_ramdisk secondary_ramdisk; do {

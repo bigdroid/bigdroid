@@ -11,12 +11,12 @@ set -a
 
 	RECOVERY="yes"
 	GHOME="$SYSTEM_DIR/ghome" && {
-		mkdir -p "$GHOME"
-		chmod 755 "$GHOME"
+		sudo mkdir -p "$GHOME"
+		sudo chmod 755 "$GHOME"
 	}
 	DEPDIR="$GHOME/dependencies"
 	STATDIR="$GHOME/status"
-	GRLOAD="$GRROOT/gearload"
+	# GRLOAD="$GRROOT/gearload"
 	UNINSDIR="$GHOME/unins"
 	GAPPID="com.supremegamers.gearlock"
 	GBDIR="$GHOME/gearboot"
@@ -39,7 +39,8 @@ set -a
 	CPU_ARCH="$HOST_ARCH"
     
 	if test -e "$SYSTEM_DIR/build.prop"; then
-		SDK="$(sed -n "s/^ro.build.version.sdk=//p" "$SYSTEM_DIR/build.prop" 2>/dev/null | head -n 1)"
+		SDK="$(sudo sed -n "s/^ro.build.version.sdk=//p" "$SYSTEM_DIR/build.prop" 2>/dev/null | head -n1)"
+	
 		case "$SDK" in
 			22) v="5.1" ;;
 			23) v="6.0" ;;
@@ -70,12 +71,12 @@ set -a
 ############# From gearlock/bin/fetch.in
 ############# 
 # Cli color vars
-RC='\033[0m' RED='\033[0;31m' BRED='\033[1;31m' GRAY='\033[1;30m' BLUE='\033[0;34m' BBLUE='\033[1;34m' CYAN='\033[0;34m' BCYAN='\033[1;34m' WHITE='\033[1;37m' GREEN='\033[0;32m' BGREEN='\033[1;32m' YELLOW='\033[1;33m' PURPLE='\033[0;35m' BPURPLE='\033[1;35m' ORANGE='\033[0;33m'
-if [ "$TERMINAL_EMULATOR" == "no" ]; then
-	UBLACK='' URED='' UGREEN='' UYELLOW='' UBLUE='' UPURPLE='' UCYAN='' UWHITE=''
-else
-	UBLACK='\033[4;30m' URED='\033[4;31m' UGREEN='\033[4;32m' UYELLOW='\033[4;33m' UBLUE='\033[4;34m' UPURPLE='\033[4;35m' UCYAN='\033[4;36m' UWHITE='\033[4;37m'
-fi
+# RC='\033[0m' RED='\033[0;31m' BRED='\033[1;31m' GRAY='\033[1;30m' BLUE='\033[0;34m' BBLUE='\033[1;34m' CYAN='\033[0;34m' BCYAN='\033[1;34m' WHITE='\033[1;37m' GREEN='\033[0;32m' BGREEN='\033[1;32m' YELLOW='\033[1;33m' PURPLE='\033[0;35m' BPURPLE='\033[1;35m' ORANGE='\033[0;33m'
+# if [ "$TERMINAL_EMULATOR" == "no" ]; then
+# 	UBLACK='' URED='' UGREEN='' UYELLOW='' UBLUE='' UPURPLE='' UCYAN='' UWHITE=''
+# else
+# 	UBLACK='\033[4;30m' URED='\033[4;31m' UGREEN='\033[4;32m' UYELLOW='\033[4;33m' UBLUE='\033[4;34m' UPURPLE='\033[4;35m' UCYAN='\033[4;36m' UWHITE='\033[4;37m'
+# fi
 
 # ANSI color vars
 MRC='\Zn' MU='\Zu' MBOLD='\Zb' MBLACK='\Z0' MRED='\Z1' MGREEN='\Z2' MYELLOW='\Z3' MBLUE='\Z4' MPINK='\Z5' MCYAN='\Z6' MWHITE='\Z7' ## MetroUi color vars
