@@ -1,9 +1,1 @@
-/build
-/tmp
-/hooks
-/iso
-/*.iso
-/mount
-/overlay
 /target
-/src/bigdroid
