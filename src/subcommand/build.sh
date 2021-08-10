@@ -158,7 +158,6 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 		process::self::exit;
 	} fi
 
-	process::self::exit;
 
 	# The later build process.....
 	# TODO.....
@@ -247,14 +246,14 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 	if test "$_arg_image_only" == "off"; then {
 
 		(
-			OUTPUT_ISO="$_target_workdir/${NAME}_${VERSION}.iso";
+			OUTPUT_ISO="$_target_workdir/${CODENAME}_${VERSION}.iso";
 			cd "$_src_dir";
 			rm -rf '[BOOT]';
 			find . -type f -name 'TRANS.TBL' -delete;
 			genisoimage -vJURT -b isolinux/isolinux.bin -c isolinux/boot.cat \
 			-no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot \
 			-e boot/grub/efi.img -no-emul-boot -input-charset utf-8 \
-			-V "$NAME" -o "$OUTPUT_ISO" .;
+			-V "$CODENAME" -o "$OUTPUT_ISO" .;
 		)
 
 	} fi

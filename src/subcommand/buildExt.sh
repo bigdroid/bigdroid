@@ -36,7 +36,7 @@ function ramdisk::extract() {
 
 function ramdisk::create() {
 	local _input_dir="$1";
-	local _output_image="$2";
+	d";
 	(
 		cd "$_input_dir";
 		log::rootcmd find . | cpio -o -H newc | gzip > "$_output_image";
