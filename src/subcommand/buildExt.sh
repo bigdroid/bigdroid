@@ -39,8 +39,7 @@ function ramdisk::create() {
 	local _output_image="$2";
 	(
 		cd "$_input_dir";
-	 	find . | cpio --owner=0:0 -o -H newc | runas::root -c 'gzip' > "$_output_image";
-	 
+	 	runas::root -c "find . | cpio --owner=0:0 -o -H newc | gzip" > "$_output_image";
 	)	
 }
 
