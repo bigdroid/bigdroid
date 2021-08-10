@@ -224,7 +224,7 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 		local sysimg_newSize;
 		sysimg_newSize="$(( (_orig_system_image_size - ${_sysimg_freeSpace/M/}) + 100 ))M"
 		log::rootcmd resize2fs "$SYSTEM_IMAGE" "$sysimg_newSize";
-		log::rootcmd e2fsck -fy "$SYSTEM_IMAGE" >/dev/null 2>&1
+		log::rootcmd bash -c "e2fsck -fy $SYSTEM_IMAGE || true";
 	} fi
 	
 
