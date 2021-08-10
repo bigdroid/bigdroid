@@ -218,7 +218,7 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 	} fi
 
 	log::rootcmd umount -fd "$TEMP_SYSTEM_IMAGE_MOUNT";
-	log::rootcmd e2fsck -fy "$SYSTEM_IMAGE" >/dev/null 2>&1
+	log::rootcmd bash -c "e2fsck -fy $SYSTEM_IMAGE || true";
 	log::rootcmd rm -rf "$TEMP_SYSTEM_IMAGE_MOUNT"
 	if test -v "_sysimg_reduceSize"; then {
 		local sysimg_newSize;
