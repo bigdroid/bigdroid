@@ -188,7 +188,7 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 		SYSTEM_IMAGE="$_src_dir/system.img";
 	} fi
 
-	_system_mount_dir_size="$(runas::root -c 'du -sbm "$SYSTEM_MOUNT_DIR"' | awk '{print $1}')";
+	_system_mount_dir_size="$(runas::root -c "du -sbm $SYSTEM_MOUNT_DIR" | awk '{print $1}')";
 	_orig_system_image_size="$(du -sbm "$SYSTEM_IMAGE" | awk '{print $1}')";
 
 	if test "$(( _system_mount_dir_size + 100 ))" -gt "$_orig_system_image_size"; then {
@@ -212,7 +212,7 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 	# println.cmd wipedir "$TEMP_SYSTEM_IMAGE_MOUNT"
 	log::rootcmd rsync -a --delete "$SYSTEM_MOUNT_DIR/" "$TEMP_SYSTEM_IMAGE_MOUNT"
 	# Determine if we need to reduce system image size
-	_sysimg_freeSpace="$(runas::root 'df -h --output=avail "$TEMP_SYSTEM_IMAGE_MOUNT"' | tail -n1 | xargs)"
+	_sysimg_freeSpace="$(runas::root "df -h --output=avail $TEMP_SYSTEM_IMAGE_MOUNT" | tail -n1 | xargs)"
 	if test "${_sysimg_freeSpace/M/}" -gt 100; then {
 		_sysimg_reduceSize=true;
 	} fi
