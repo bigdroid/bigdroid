@@ -252,10 +252,10 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 			log::rootcmd rm -rf "$_src_dir/"'[BOOT]';
 			log::rootcmd find "$_src_dir" -type f -name 'TRANS.TBL' -delete;
 			log::info "Running final ISO image creation";
-			genisoimage -vJURT -b isolinux/isolinux.bin -c isolinux/boot.cat \
+			log::rootcmd genisoimage -vJURT -b isolinux/isolinux.bin -c isolinux/boot.cat \
 			-no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot \
 			-e boot/grub/efi.img -no-emul-boot -input-charset utf-8 \
-			-V "$CODENAME" -o "$OUTPUT_ISO" . 1>/dev/null;
+			-V "$CODENAME" -o "$OUTPUT_ISO" .;
 		)
 
 	} fi
