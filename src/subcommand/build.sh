@@ -212,7 +212,7 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 	# println.cmd wipedir "$TEMP_SYSTEM_IMAGE_MOUNT"
 	log::rootcmd rsync -a --delete "$SYSTEM_MOUNT_DIR/" "$TEMP_SYSTEM_IMAGE_MOUNT"
 	# Determine if we need to reduce system image size
-	_sysimg_freeSpace="$(df -h --output=avail "$TEMP_SYSTEM_IMAGE_MOUNT" | tail -n1 | xargs)"
+	_sysimg_freeSpace="$(runas::root 'df -h --output=avail "$TEMP_SYSTEM_IMAGE_MOUNT"' | tail -n1 | xargs)"
 	if test "${_sysimg_freeSpace/M/}" -gt 100; then {
 		_sysimg_reduceSize=true;
 	} fi
