@@ -188,7 +188,7 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 		SYSTEM_IMAGE="$_src_dir/system.img";
 	} fi
 
-	_system_mount_dir_size="$(runas::root du -sbm "$SYSTEM_MOUNT_DIR" | awk '{print $1}')";
+	_system_mount_dir_size="$(runas::root -c 'du -sbm "$SYSTEM_MOUNT_DIR"' | awk '{print $1}')";
 	_orig_system_image_size="$(du -sbm "$SYSTEM_IMAGE" | awk '{print $1}')";
 
 	if test "$(( _system_mount_dir_size + 100 ))" -gt "$_orig_system_image_size"; then {
