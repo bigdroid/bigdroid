@@ -184,7 +184,7 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 	# TODO: See if we can cache system.img for improved performance
 	if test "${SYSTEM_IMAGE##*/}" == "system.sfs"; then {
 		log::rootcmd 7z x -o"$_src_dir" "$SYSTEM_IMAGE" 'system.img';
-		rm "$SYSTEM_IMAGE"; # Remove system.sfs
+		log::rootcmd rm "$SYSTEM_IMAGE"; # Remove system.sfs
 		SYSTEM_IMAGE="$_src_dir/system.img";
 	} fi
 
@@ -218,8 +218,8 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 	} fi
 
 	log::rootcmd umount -fd "$TEMP_SYSTEM_IMAGE_MOUNT";
-	e2fsck -fy "$SYSTEM_IMAGE" >/dev/null 2>&1
-	println.cmd rm -rf "$TEMP_SYSTEM_IMAGE_MOUNT"
+	log::rootcmd e2fsck -fy "$SYSTEM_IMAGE" >/dev/null 2>&1
+	log::rootcmd rm -rf "$TEMP_SYSTEM_IMAGE_MOUNT"
 	if test -v "_sysimg_reduceSize"; then {
 		local sysimg_newSize;
 		sysimg_newSize="$(( (_orig_system_image_size - ${_sysimg_freeSpace/M/}) + 100 ))M"
@@ -248,8 +248,8 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 		(
 			OUTPUT_ISO="$_target_workdir/${CODENAME}_${VERSION}.iso";
 			cd "$_src_dir";
-			rm -rf '[BOOT]';
-			find . -type f -name 'TRANS.TBL' -delete;
+			log::rootcmd rm -rf '[BOOT]';
+			log::rootcmd find . -type f -name 'TRANS.TBL' -delete;
 			genisoimage -vJURT -b isolinux/isolinux.bin -c isolinux/boot.cat \
 			-no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot \
 			-e boot/grub/efi.img -no-emul-boot -input-charset utf-8 \
