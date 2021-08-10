@@ -21,7 +21,7 @@ function ramdisk::extract() {
 	_image_type="$(file "$_ramdisk_image")";
 
 	(
-		wipedir "$_extract_dir";
+		wipedir "$_extract_dir;
 		mkdir -p "$_extract_dir" && cd "$_extract_dir";
 		log::info "Extracting ${_ramdisk_image##*/}";
 		if [[ "$_image_type" =~ .*cpio.* ]]; then {
