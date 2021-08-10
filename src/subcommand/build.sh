@@ -102,15 +102,15 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 
 		#### END SOME VARIABLE EXPORTS
 		
-		### Bring standard ISO components when required
-		# ensure::isocommon;
-		# local _item;
-		# for _item in '.disk' 'boot' 'efi' 'isolinux' 'install.img' 'findme'; do {
-		# 	if test ! -e "$_src_dir/$_item"; then {
-		# 		log::cmd rsync -a "$_bigdroid_isocommon_dir/$_item" "$_src_dir/";
-		# 	} fi
-		# } done
-		# unset _item;
+		## Bring standard ISO components when required
+		ensure::isocommon;
+		local _item;
+		for _item in '.disk' 'boot' 'efi' 'isolinux' 'install.img' 'findme'; do {
+			if test ! -e "$_src_dir/$_item"; then {
+				log::cmd rsync -a "$_bigdroid_isocommon_dir/$_item" "$_src_dir/";
+			} fi
+		} done
+		unset _item;
 
 		#### Mount system image
 		SYSTEM_IMAGE="$(
@@ -123,9 +123,9 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 		)"
 		
 		if test -n "$SYSTEM_IMAGE"; then {
-			export SYSTEM_IMAGE;
+			export SYSTEM_IMAGE; # EXPORTS
 		} else {
-			log::error "No SYSTEM_IMAGE was found in src/" 1 || exit;
+			log::error "No SYSTEM_IMAGE was found in src/" 1 || process::self::exit;
 		} fi
 
 		log::rootcmd mount -oro,loop "$SYSTEM_IMAGE" "$SYSTEM_MOUNT_DIR";
@@ -133,9 +133,11 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 			log::rootcmd mount -oro,loop "$SYSTEM_MOUNT_DIR/system.img" "$SYSTEM_MOUNT_DIR";
 		} fi
 		mount::overlayFor "$SYSTEM_MOUNT_DIR";
-
-
 		
+		#### Extract ramdisk images
+		ramdisk::extract "$_src_dir/initrd.img" "$INITIAL_RAMDISK_MOUNT_DIR";
+		ramdisk::extract "$_src_dir/ramdisk.img" "$SECONDARY_RAMDISK_MOUNT_DIR"
+		ramdisk::extract "$_src_dir/install.img" "$INSTALL_RAMDISK_MOUNT_DIR";
 
 		### Inject hooks
 		# for _hook in "${HOOKS[@]}"; do {
@@ -153,11 +155,108 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 	# Check if hooks only
 	if test "$_arg_hooks_only" == "on"; then {
 		log::info "Terminating the process without building ISO, only loaded hooks";
-		exit 0;
+		process::self::exit;
 	} fi
+
+	process::self::exit;
 
 	# The later build process.....
 	# TODO.....
+	
+	# Remove ghome dir if empty
+	if test -n "$(find "$SYSTEM_MOUNT_DIR/ghome" -maxdepth 0 -empty)"; then {
+		log::rootcmd rm -r "$SYSTEM_MOUNT_DIR/ghome";
+	} fi
 
+	# # Copy cached files into iso/
+	# PFUNCNAME="${FUNCNAME[0]}::cache_iso" println.cmd rsync -a "$ISO_DIR/" "$BUILD_DIR"
+	# TEMP_SYSTEM_IMAGE_MOUNT="$TMP_DIR/build_system_mount"
 
+	# ! mountpoint -q "$SYSTEM_MOUNT_DIR" && {
+	# 	mount.load
+    # }
+
+	### Extend system image if necessary
+	local _system_mount_dir_size _orig_system_image_size _megs2add;
+	local _sysimg_freeSpace _sysimg_reduceSize;
+	local TEMP_SYSTEM_IMAGE_MOUNT="$_mount_dir/system_tmp_mount";
+
+	### Fetch system.img out of system.sfs if necessary
+	# TODO: See if we can cache system.img for improved performance
+	if test "${SYSTEM_IMAGE##*/}" == "system.sfs"; then {
+		log::rootcmd 7z x -o"$_src_dir" "$SYSTEM_IMAGE" 'system.img';
+		rm "$SYSTEM_IMAGE"; # Remove system.sfs
+		SYSTEM_IMAGE="$_src_dir/system.img";
+	} fi
+
+	_system_mount_dir_size="$(du -sbm "$SYSTEM_MOUNT_DIR" | awk '{print $1}')";
+	_orig_system_image_size="$(du -sbm "$SYSTEM_IMAGE" | awk '{print $1}')";
+
+	if test "$(( _system_mount_dir_size + 100 ))" -gt "$_orig_system_image_size"; then {
+		_megs2add="$(( (_system_mount_dir_size - _orig_system_image_size) + 100 ))"
+	} fi
+
+	# if mountpoint -q "$TEMP_SYSTEM_IMAGE_MOUNT"; then {
+	# 	log::rootcmd umount -fd "$TEMP_SYSTEM_IMAGE_MOUNT"
+	# } fi
+
+	if test -v "_megs2add"; then {
+		log::rootcmd dd if=/dev/zero bs=1M count="$_megs2add" >> "$SYSTEM_IMAGE";
+		log::rootcmd e2fsck -fy "$SYSTEM_IMAGE";
+		log::rootcmd resize2fs "$SYSTEM_IMAGE";
+	} fi
+
+	# Put new system image content
+	# export PFUNCNAME="${FUNCNAME[0]}::create_new_system"
+	mkdir -p "$TEMP_SYSTEM_IMAGE_MOUNT";
+	log::rootcmd mount -orw,loop "$SYSTEM_IMAGE" "$TEMP_SYSTEM_IMAGE_MOUNT"
+	# println.cmd wipedir "$TEMP_SYSTEM_IMAGE_MOUNT"
+	log::rootcmd rsync -a --delete "$SYSTEM_MOUNT_DIR/" "$TEMP_SYSTEM_IMAGE_MOUNT"
+	# Determine if we need to reduce system image size
+	_sysimg_freeSpace="$(df -h --output=avail "$TEMP_SYSTEM_IMAGE_MOUNT" | tail -n1 | xargs)"
+	if test "${_sysimg_freeSpace/M/}" -gt 100; then {
+		_sysimg_reduceSize=true;
+	} fi
+
+	log::rootcmd umount -fd "$TEMP_SYSTEM_IMAGE_MOUNT";
+	e2fsck -fy "$SYSTEM_IMAGE" >/dev/null 2>&1
+	println.cmd rm -rf "$TEMP_SYSTEM_IMAGE_MOUNT"
+	if test -v "_sysimg_reduceSize"; then {
+		local sysimg_newSize;
+		sysimg_newSize="$(( (_orig_system_image_size - ${_sysimg_freeSpace/M/}) + 100 ))M"
+		log::rootcmd resize2fs "$SYSTEM_IMAGE" "$sysimg_newSize";
+		log::rootcmd e2fsck -fy "$SYSTEM_IMAGE" >/dev/null 2>&1
+	} fi
+	
+
+	# Create suqashed system image
+	if test "$_arg_image_only" == "off"; then {
+		log::rootcmd chmod 644 "$SYSTEM_IMAGE";
+		log::rootcmd mksquashfs "$SYSTEM_IMAGE" "$_src_dir/system.sfs";
+		log::rootcmd rm "$SYSTEM_IMAGE"; # Remove system.img
+	} fi
+
+	# Create new ramdisk images
+	ramdisk::create "$INITIAL_RAMDISK_MOUNT_DIR" "$_src_dir/initrd.img";
+	ramdisk::create "$INSTALL_RAMDISK_MOUNT_DIR" "$_src_dir/install.img";
+	if test "$SECONDARY_RAMDISK" == true; then {
+		ramdisk::create "$SECONDARY_RAMDISK_MOUNT_DIR" "$_src_dir/ramdisk.img";
+	} fi
+
+	# Now lets finally create an ISO image
+	if test "$_arg_image_only" == "off"; then {
+
+		(
+			OUTPUT_ISO="$_target_workdir/${NAME}_${VERSION}.iso";
+			cd "$_src_dir";
+			rm -rf '[BOOT]';
+			find . -type f -name 'TRANS.TBL' -delete;
+			genisoimage -vJURT -b isolinux/isolinux.bin -c isolinux/boot.cat \
+			-no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot \
+			-e boot/grub/efi.img -no-emul-boot -input-charset utf-8 \
+			-V "$NAME" -o "$OUTPUT_ISO" .;
+		)
+
+	} fi
+	
 }

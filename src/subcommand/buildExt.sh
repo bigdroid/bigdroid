@@ -6,27 +6,41 @@
 #######################
 #######################
 
-function get.systemimg() {
-	local IMG_BASE="$1"
-	export SYSTEM_IMAGE="$(
-		if test -e "$IMG_BASE/system.img"; then
-			echo "$IMG_BASE/system.img"
-		elif test -e "$IMG_BASE/system.sfs"; then
-			echo "$IMG_BASE/system.sfs"
-		else
-			(exit 1)
-			println "System image not found"
-			exit 1
-		fi
-	)"
-}
-
 function ensure::isocommon() {
 	if test ! -e "$_bigdroid_isocommon_dir/.git"; then {
 		wipedir "$_bigdroid_isocommon_dir";
 		log::info "Fetching isocommon repository";
 		log::cmd git clone https://github.com/supremegamers/awin-installer-dev "$_bigdroid_isocommon_dir";
 	} fi
+}
+
+function ramdisk::extract() {
+	local _ramdisk_image="$1";
+	local _extract_dir="$2";
+	local _image_type;
+	_image_type="$(file "$_ramdisk_image")";
+
+	(
+		wipedir "$_extract_dir";
+		mkdir -p "$_extract_dir" && cd "$_extract_dir";
+		log::info "Extracting ${_ramdisk_image##*/}";
+		if [[ "$_image_type" =~ .*cpio.* ]]; then {
+			runas::root -c '(cpio -iud; cpio -iud || true)' < "$_ramdisk_image" > /dev/null 2>&1;
+		} elif [[ "$_image_type" =~ .*gzip.* ]]; then {
+			zcat "$_ramdisk_image" | runas::root -c '(cpio -iud; cpio -iud || true)' > /dev/null 2>&1;
+		} else {
+			log::error "Unknown image format: ${_ramdisk_image##*/}" 1 || process::self::exit;
+		} fi
+	)
+}
+
+function ramdisk::create() {
+	local _input_dir="$1";
+	local _output_image="$2";
+	(
+		cd "$_input_dir";
+		log::rootcmd find . | cpio -o -H newc | gzip > "$_output_image";
+	)	
 }
 
 #######################
@@ -69,7 +83,7 @@ function mount::overlayFor() {
 	local _for="$1";
 	local _overlay_dir_node="$_overlay_dir/${_for##*/}";
 
-	log::cmd wipedir "$_overlay_dir_node";
+	wipedir "$_overlay_dir_node";
 	mkdir -p "$_overlay_dir_node" "$_overlay_dir_node/lower" "$_overlay_dir_node/worker";
 	log::rootcmd mount -t overlay overlay -olowerdir="$_for",upperdir="$_overlay_dir_node/lower",workdir="$_overlay_dir_node/worker" "$_for";
 }
@@ -78,7 +92,7 @@ function mount::overlay() {
 	local _upper="$1";
 	local _lower="$2";
 	local _overlay_dir_node="$_overlay_dir/${_upper##*/}";
-	log::cmd wipedir "$_overlay_dir_node";
+	wipedir "$_overlay_dir_node";
 	mkdir -p "$_overlay_dir_node/worker";
 	log::rootcmd mount -t overlay overlay -olowerdir="$_lower",upperdir="$_upper",workdir="$_overlay_dir_node/worker" "$_lower";
 }

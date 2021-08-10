@@ -2,11 +2,17 @@ function hook::inject() {
 
 	function inject::run_script() {
 		local _script="$1";
-		sudo -E bash -eEuT -o pipefail \
-			-O expand_aliases -O expand_aliases \
-				"$_script" || {
+		# Exports
+		HOOK_BASE="${_script%/*}" \
+		HOOK_DIR="${_script%/*}" \
+		SRC_DIR="$_src_dir"	\
+		ISO_DIR="$_src_dir" \
+		MOUNT_DIR="$_mount_dir" \
+		OVERLAY_DIR="$_overlay_dir" \
+		TMP_DIR="$_tmp_dir" \
+		runas::root "$_script" || {
 								local _r=$?;
-								log::error "${_hook_dir##*/} exited with error code $_r" $_r || exit;
+								log::error "${_hook_dir##*/} exited with error code $_r" $_r || process::self::exit;
 							}
 		echo "${_script%/*}" >> "$_applied_hooks_statfile";		
 	}

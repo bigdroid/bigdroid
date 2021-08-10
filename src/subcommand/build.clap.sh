@@ -30,6 +30,7 @@ _arg_debug="off";
 _arg_release="off";
 _arg_run="off";
 _arg_hooks_only="off";
+_arg_image_only="off";
 _arg_reply_yes="off";
 
 parse_commandline()
@@ -49,6 +50,9 @@ parse_commandline()
 				;;
 			--hooks-only)
 				_arg_hooks_only="on";
+				;;
+			--image-only)
+				_arg_image_only="on";
 				;;
 			--reply-yes)
 				_arg_reply_yes="on";

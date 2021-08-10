@@ -7,4 +7,4 @@ DEPENDENCIES=(
 	"argbash::0.1.0"
 )
 REPOSITORY="https://github.com/bigdroid/bigdroid"
-BASHBOX_COMPAT="0.2.0~"
+BASHBOX_COMPAT="0.3.0~"
