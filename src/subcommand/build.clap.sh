@@ -184,7 +184,6 @@ readonly _build_dir="$_target_workdir/build";
 # Make sure to empty the temporary dir
 readonly _tmp_dir="$_target_workdir/$_tmp_dir_name" && mkdir -p "$_tmp_dir" && wipedir "$_tmp_dir";
 export _applied_hooks_statfile="$_tmp_dir/.applied_hooks" && readonly _applied_hooks_statfile;
-readonly _sudo_function_file="$_tmp_dir/.sudoFunctions";
 
 ### Create mount dirs
 for _mdir in system initial_ramdisk install_ramdisk secondary_ramdisk; do {

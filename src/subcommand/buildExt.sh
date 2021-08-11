@@ -95,4 +95,4 @@ function mount::overlay() {
 	log::rootcmd mount -t overlay overlay -olowerdir="$_lower",upperdir="$_upper",workdir="$_overlay_dir_node/worker" "$_lower";
 }
 
-extract::bashFuncToFile "$_sudo_function_file" "gclone" "wipedir" "mount::umountTree" "mount::overlayFor" "mount::overlay";
+extract::bashFuncToFile "$_bigdroid_sudo_function_file" "gclone" "wipedir" "mount::umountTree" "mount::overlayFor" "mount::overlay";
