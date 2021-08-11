@@ -3,14 +3,11 @@ function hook::inject() {
 	function inject::run_script() {
 		local _script="$1";
 		# Exports
-		HOOK_BASE="${_script%/*}" \
 		HOOK_DIR="${_script%/*}" \
 		SRC_DIR="$_src_dir"	\
-		ISO_DIR="$_src_dir" \
 		MOUNT_DIR="$_mount_dir" \
-		OVERLAY_DIR="$_overlay_dir" \
 		TMP_DIR="$_tmp_dir" \
-		runas::root "$_script" || {
+		runas::root -c "source $_sudo_function_file; $_script" || {
 								local _r=$?;
 								log::error "${_hook_dir##*/} exited with error code $_r" $_r || process::self::exit;
 							}
@@ -34,12 +31,9 @@ function hook::inject() {
 
 		# Read metadata
 		(
-			# Load native gearlock functions
+			# Load native gearlock functions and the project metadata
 			use box::libgearlock;
-
-			set -a
 			source "$_hook_dir/bd.meta.sh" || log::error "Failed to load ${_hook_dir##*/} metadata" 1 || process::self::exit;
-			set +a
 
 			# Satisfy dependencies
 			for _dep in "${DEPENDENCIES[@]}"; do
@@ -58,38 +52,6 @@ function hook::inject() {
 		
 	} done
 }
-#######################
-#######################
-##                   ##
-##      PRIVATE      ##
-##                   ##
-#######################
-#######################
-
-# function load.hooks() {
-# # TODO: Better error message
-
-
-
-	# function hook::parse_option() {
-	# 	local input="$1"
-	# 	local range="${2:-1}"
-	# 	local values
-	# 	values=($(sed 's|,| |g' <<<"$input"))
-
-	# 	local lines
-	# 	for value in "${values[@]}"; do
-	# 		lines+="$(echo -e "\n${value}")"
-	# 	done
-
-	# 	# If the specified range is larger than input string
-	# 	# Then we just return the 1st line.
-	# 	if test "$(wc -l <<<"$lines")" -lt "$range"; then
-	# 		head -n1 <<<"$lines"
-	# 	else
-	# 		sed -n "${range}p" <<<"$lines"
-	# 	fi
-	# }
 
 #######################
 #######################
@@ -99,7 +61,6 @@ function hook::inject() {
 #######################
 #######################
 
-set -a;
 function hook::fetch_path() {
 	local _hook="$1";
 	local _hook_dir;
@@ -118,6 +79,7 @@ function hook::wait_until_done() {
 	} done
 
 }
-set +a;
+
+extract::bashFuncToFile "$_sudo_function_file" "hook::fetch_path" "hook::wait_until_done";
 
 # TODO: Create a stat holder file and a function to retrieve the status of running hook and/or wait for that hook to complete in a subprocess over another hook.

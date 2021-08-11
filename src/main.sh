@@ -6,7 +6,7 @@ use std::string::strip;
 use std::string::trim;
 use std::string::matches;
 use variables;
-# use utils;
+use utils::bash;
 
 #####################
 ### Private functions

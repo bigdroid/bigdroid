@@ -36,120 +36,113 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 
 	}
 	use build.clap;
-	# (
 
-		### Load the project metadata
-		unset NAME CODENAME VERSION AUTHORS IMAGE HOOKS REPOSITORY HOMEPAGE BUGREPORT TAGS;
-		source "$_bigdroid_meta_file";
-		### Fetch for source image
-		if ! test -v IMAGE || test -z "${IMAGE:-}"; then {
-			log::error "IMAGE metadata is empty in $_bigdroid_meta_name" 1 || exit;
-		} else {
-			local _image_source _image_checksum;
-			IFS='|' read -r _image_source _image_checksum <<<"${IMAGE//::/|}";
-		} fi
+	### Load the project metadata
+	unset NAME CODENAME VERSION AUTHORS IMAGE HOOKS REPOSITORY HOMEPAGE BUGREPORT TAGS;
+	source "$_bigdroid_meta_file";
+	### Fetch for source image
+	if ! test -v IMAGE || test -z "${IMAGE:-}"; then {
+		log::error "IMAGE metadata is empty in $_bigdroid_meta_name" 1 || exit;
+	} else {
+		local _image_source _image_checksum;
+		IFS='|' read -r _image_source _image_checksum <<<"${IMAGE//::/|}";
+	} fi
 
-		case "$_image_source" in
-			http*://*)
-				local _local_image_path="$_bigdroid_imagedir/${_image_source##*/}";
-				if test ! -e "$_local_image_path"; then {
-					# Download image
-					log::info "Downloading remote image ${_image_source##*/}";
-					wget -c -O "$_local_image_path" "$_image_source";
-					# Verify checksum
-					log::info "Verifying checksum of ${_local_image_path##*/}";
-					local _local_image_checksum;
-					_local_image_checksum="$(rstrip "$(sha256sum "$_local_image_path")" " *")";
-					if test "$_local_image_checksum" != "$_image_checksum"; then {
-						log::error "Checksum mismatch, can not continue" 1 || exit;
-					} fi
+	case "$_image_source" in
+		http*://*)
+			local _local_image_path="$_bigdroid_imagedir/${_image_source##*/}";
+			if test ! -e "$_local_image_path"; then {
+				# Download image
+				log::info "Downloading remote image ${_image_source##*/}";
+				wget -c -O "$_local_image_path" "$_image_source";
+				# Verify checksum
+				log::info "Verifying checksum of ${_local_image_path##*/}";
+				local _local_image_checksum;
+				_local_image_checksum="$(rstrip "$(sha256sum "$_local_image_path")" " *")";
+				if test "$_local_image_checksum" != "$_image_checksum"; then {
+					log::error "Checksum mismatch, can not continue" 1 || exit;
 				} fi
-			;;
-			
-			*)
-				local _local_image_path="$_image_source";
-			;;
-		esac
+			} fi
+		;;
 		
-		### Umount tree
-		mount::umountTree "$_arg_path";
+		*)
+			local _local_image_path="$_image_source";
+		;;
+	esac
+	
+	### Umount tree
+	mount::umountTree "$_arg_path";
 
-		### Mount IMAGE
-		case "${_local_image_path##*.}" in
-			"iso")
-				log::info "Mounting IMAGE in RO mode";
-				log::rootcmd mount -oro,loop "$_local_image_path" "$_src_dir";
-			;;
+	### Mount IMAGE
+	case "${_local_image_path##*.}" in
+		"iso")
+			log::info "Mounting IMAGE in RO mode";
+			log::rootcmd mount -oro,loop "$_local_image_path" "$_src_dir";
+		;;
 
-			*)
-				log::warn "${_local_image_path##*/} is a uncommon file-type, trying to extract with 7z";
-				log::cmd 7z -aos -o"$_src_dir" "$_local_image_path";
-			;;
-		esac
-		mount::overlayFor "$_src_dir";
-		
-		#### START SOME VARIABLE EXPORTS
+		*)
+			log::warn "${_local_image_path##*/} is a uncommon file-type, trying to extract with 7z";
+			log::cmd 7z -aos -o"$_src_dir" "$_local_image_path";
+		;;
+	esac
+	mount::overlayFor "$_src_dir";
+	
+	#### START SOME VARIABLE EXPORTS
 
-		### Check NO_SECONDARY_RAMDISK
-		if test -e "$_src_dir/ramdisk.img"; then {
-			export SECONDARY_RAMDISK=true; # EXPORTS
-			export SECONDARY_RAMDISK_MOUNT_DIR="$_mount_dir/secondary_ramdisk"; # EXPORTS
-		} else {
-			export SECONDARY_RAMDISK=false; # EXPORTS
-			rm -rf "$SECONDARY_RAMDISK_MOUNT_DIR";
+	### Check NO_SECONDARY_RAMDISK
+	if test -e "$_src_dir/ramdisk.img"; then {
+		export SECONDARY_RAMDISK=true; # EXPORTS
+		export SECONDARY_RAMDISK_MOUNT_DIR="$_mount_dir/secondary_ramdisk"; # EXPORTS
+	} else {
+		export SECONDARY_RAMDISK=false; # EXPORTS
+		rm -rf "$SECONDARY_RAMDISK_MOUNT_DIR";
+	} fi
+	
+
+	#### END SOME VARIABLE EXPORTS
+	
+	## Bring standard ISO components when required
+	ensure::isocommon;
+	local _item;
+	for _item in '.disk' 'boot' 'efi' 'isolinux' 'install.img' 'findme'; do {
+		if test ! -e "$_src_dir/$_item"; then {
+			log::cmd rsync -a "$_bigdroid_isocommon_dir/$_item" "$_src_dir/";
 		} fi
-		
+	} done
+	unset _item;
 
-		#### END SOME VARIABLE EXPORTS
-		
-		## Bring standard ISO components when required
-		ensure::isocommon;
-		local _item;
-		for _item in '.disk' 'boot' 'efi' 'isolinux' 'install.img' 'findme'; do {
-			if test ! -e "$_src_dir/$_item"; then {
-				log::cmd rsync -a "$_bigdroid_isocommon_dir/$_item" "$_src_dir/";
+	#### Mount system image
+	SYSTEM_IMAGE="$(
+		for _img in "system.img" "system.sfs"; do {
+			if test -e "$_src_dir/$_img"; then {
+				echo "$_src_dir/$_img";
+				break;
 			} fi
 		} done
-		unset _item;
+	)"
+	
+	if test -n "$SYSTEM_IMAGE"; then {
+		export SYSTEM_IMAGE; # EXPORTS
+	} else {
+		log::error "No SYSTEM_IMAGE was found in src/" 1 || process::self::exit;
+	} fi
 
-		#### Mount system image
-		SYSTEM_IMAGE="$(
-			for _img in "system.img" "system.sfs"; do {
-				if test -e "$_src_dir/$_img"; then {
-					echo "$_src_dir/$_img";
-					break;
-				} fi
-			} done
-		)"
-		
-		if test -n "$SYSTEM_IMAGE"; then {
-			export SYSTEM_IMAGE; # EXPORTS
-		} else {
-			log::error "No SYSTEM_IMAGE was found in src/" 1 || process::self::exit;
-		} fi
+	log::rootcmd mount -oro,loop "$SYSTEM_IMAGE" "$SYSTEM_MOUNT_DIR";
+	if test -e "$SYSTEM_MOUNT_DIR/system.img"; then {
+		log::rootcmd mount -oro,loop "$SYSTEM_MOUNT_DIR/system.img" "$SYSTEM_MOUNT_DIR";
+	} fi
+	mount::overlayFor "$SYSTEM_MOUNT_DIR";
+	
+	#### Extract ramdisk images
+	ramdisk::extract "$_src_dir/initrd.img" "$INITIAL_RAMDISK_MOUNT_DIR";
+	ramdisk::extract "$_src_dir/ramdisk.img" "$SECONDARY_RAMDISK_MOUNT_DIR"
+	ramdisk::extract "$_src_dir/install.img" "$INSTALL_RAMDISK_MOUNT_DIR";
 
-		log::rootcmd mount -oro,loop "$SYSTEM_IMAGE" "$SYSTEM_MOUNT_DIR";
-		if test -e "$SYSTEM_MOUNT_DIR/system.img"; then {
-			log::rootcmd mount -oro,loop "$SYSTEM_MOUNT_DIR/system.img" "$SYSTEM_MOUNT_DIR";
-		} fi
-		mount::overlayFor "$SYSTEM_MOUNT_DIR";
-		
-		#### Extract ramdisk images
-		ramdisk::extract "$_src_dir/initrd.img" "$INITIAL_RAMDISK_MOUNT_DIR";
-		ramdisk::extract "$_src_dir/ramdisk.img" "$SECONDARY_RAMDISK_MOUNT_DIR"
-		ramdisk::extract "$_src_dir/install.img" "$INSTALL_RAMDISK_MOUNT_DIR";
+	### Inject hooks
+	subcommand::hook install "${_subcommand_hook_args[@]}" "${HOOKS[@]}";
+	subcommand::hook inject "${_subcommand_hook_args[@]}" "${HOOKS[@]}";
 
-		### Inject hooks
-		# for _hook in "${HOOKS[@]}"; do {
-			# Install hook if not presesnt
-		subcommand::hook install "${_subcommand_hook_args[@]}" "${HOOKS[@]}";
-		subcommand::hook inject "${_subcommand_hook_args[@]}" "${HOOKS[@]}";
 
-			# Inject hooks
-			# TODO....
-		# } done
-
-	# )	
 	
 
 	# Check if hooks only

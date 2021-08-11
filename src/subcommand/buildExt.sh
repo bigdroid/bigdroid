@@ -51,7 +51,6 @@ function ramdisk::create() {
 #######################
 #######################
 
-set -a;
 function gclone(){
 	echo -e "============= ${GREEN}Progress${RC} = ${ORANGE}Speed${RC} ========================================"
 	rsync -ah --info=progress2 "$@"
@@ -65,7 +64,6 @@ function wipedir() {
 		fi
 	done
 }
-
 
 function mount::umountTree() {
 	local _tree="$1";
@@ -96,4 +94,5 @@ function mount::overlay() {
 	mkdir -p "$_overlay_dir_node/worker";
 	log::rootcmd mount -t overlay overlay -olowerdir="$_lower",upperdir="$_upper",workdir="$_overlay_dir_node/worker" "$_lower";
 }
-set +a;
+
+extract::bashFuncToFile "$_sudo_function_file" "gclone" "wipedir" "mount::umountTree" "mount::overlayFor" "mount::overlay";
