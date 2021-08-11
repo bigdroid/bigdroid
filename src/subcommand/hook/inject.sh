@@ -1,21 +1,43 @@
 function hook::inject() {
+	use bashbox::header;
 
 	function inject::run_script() {
 		local _script="$1";
+		local _orig_script;
+		# Bootstrap
+		_orig_script=$(< "$_script");
+
+		cat "$_bigdroid_sudo_function_file" > "$_script";
+		echo "${_orig_script}" >> "$_script"
+
 		# Exports
 		HOOK_DIR="${_script%/*}" \
 		SRC_DIR="$_src_dir"	\
 		MOUNT_DIR="$_mount_dir" \
 		TMP_DIR="$_tmp_dir" \
-		runas::root -c "source $_bigdroid_sudo_function_file; $_script" || {
+		runas::root -c "$_script" || {
 								local _r=$?;
+								echo "${_orig_script}" > "$_script";
 								log::error "${_hook_dir##*/} exited with error code $_r" $_r || process::self::exit;
 							}
-		echo "${_script%/*}" >> "$_applied_hooks_statfile";		
+		echo "${_orig_script}" > "$_script";
+		echo "${_script%/*}" >> "$_applied_hooks_statfile";
+		# git -C "${_script%/*}" checkout "$_bigdroid_common_hook_file_name";
 	}
 
+	# Bootstrap bash functions
+	local _bb_bootstrap;
+	_bb_bootstrap=$(declare -f bb_bootstrap_header) && {
+		_bb_bootstrap="${_bb_bootstrap#*{}";
+		_bb_bootstrap="${_bb_bootstrap%\}}";
+	}
+	echo '___self_PID=$$;' >> "$_bigdroid_sudo_function_file";
+	echo "$_bb_bootstrap" >> "$_bigdroid_sudo_function_file";
 	extract::bashFuncToFile "$_bigdroid_sudo_function_file" "geco" "gclone" "wipedir" "mount::umountTree" "mount::overlayFor" "mount::overlay";
 	extract::bashFuncToFile "$_bigdroid_sudo_function_file" "hook::parsemeta" "hook::fetch_path" "hook::wait_until_done";
+	extract::bashFuncToFile "$_bigdroid_sudo_function_file" "log::info" "log::warn";
+	echo >> "$_bigdroid_sudo_function_file";
+	
 
 	local _hook;
 	for _hook in "${@}"; do {

@@ -5,6 +5,7 @@ VERSION="1.0"
 DEPENDENCIES=(
 	"std::0.1.5"
 	"argbash::0.1.0"
+	"bashbox::0.3.3"
 )
 REPOSITORY="https://github.com/bigdroid/bigdroid"
 BASHBOX_COMPAT="0.3.0~"
