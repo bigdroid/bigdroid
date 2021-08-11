@@ -26,6 +26,14 @@ readonly SUBCOMMANDS_DESC=(
 	"Install bashbox into PATH"
 );
 
+# Exports
+_var_exports=(
+	_bigdroid_registrydir
+)
+for _var in "${_var_exports[@]}"; do {
+	export "$_var";
+} done
+
 
 function ttttt______variables() {	
 
