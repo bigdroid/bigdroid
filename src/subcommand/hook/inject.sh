@@ -14,7 +14,7 @@ function hook::inject() {
 		echo "${_script%/*}" >> "$_applied_hooks_statfile";		
 	}
 
-	extract::bashFuncToFile "$_bigdroid_sudo_function_file" "gclone" "wipedir" "mount::umountTree" "mount::overlayFor" "mount::overlay";
+	extract::bashFuncToFile "$_bigdroid_sudo_function_file" "geco" "gclone" "wipedir" "mount::umountTree" "mount::overlayFor" "mount::overlay";
 	extract::bashFuncToFile "$_bigdroid_sudo_function_file" "hook::parsemeta" "hook::fetch_path" "hook::wait_until_done";
 
 	local _hook;

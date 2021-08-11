@@ -51,6 +51,10 @@ function ramdisk::create() {
 #######################
 #######################
 
+function geco() {
+	echo -e "$@";
+}
+
 function gclone(){
 	echo -e "============= ${GREEN}Progress${RC} = ${ORANGE}Speed${RC} ========================================"
 	rsync -ah --info=progress2 "$@"
