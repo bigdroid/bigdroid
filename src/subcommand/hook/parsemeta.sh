@@ -8,21 +8,21 @@ function hook::parsemeta() {
 	IFS='|' read -r _repo_source _branch_name _tag_name <<<"${_input//::/|}";
 	# || log::error "Lacking proper hook information for $_hook" 1 || exit; # It might fail
 
-	if string::matches "$_repo_source" '^file://.*'; then { # Local file path
+	if [[ "$_repo_source" =~ ^file://.* ]]; then { # Local file path
 		_hook_dir="$_repo_source";
 		if test ! -e "$_hook_dir"; then {
 			log::error "$_hook_dir does not exist" 1 || exit;
 		} fi
 		_arg_force=off; # Ignore --force arg
 		_repo_url=;
-	} elif string::matches "$_repo_source" '^.*://.*'; then { # Custom git url
+	} elif [[ "$_repo_source" =~ ^.*://.* ]]; then { # Custom git url
 		_repo_url="$_repo_source";
 		IFS='|' read -r _repo_user _repo_name < <(
 			_user="${_repo_source%/*}" && _user="${_user##*/}";
 			echo -e "${_user}|${_repo_source##*/}";
 		);
 		_hook_dir="$_bigdroid_registrydir/${_repo_user}_${_repo_name}";
-	} elif string::matches "$_repo_source" "[a-zA-Z0-9_]"; then { # Short repo name for registered hooks
+	} elif [[ "$_repo_source" =~ [a-zA-Z0-9_] ]]; then { # Short repo name for registered hooks
 		_repo_url="https://github.com/${_bigdroid_hooks_root}/${_repo_source}";
 		_hook_dir="$_bigdroid_registrydir/${_repo_source//\//_}";
 	} fi
