@@ -14,6 +14,9 @@ function hook::inject() {
 		echo "${_script%/*}" >> "$_applied_hooks_statfile";		
 	}
 
+	extract::bashFuncToFile "$_bigdroid_sudo_function_file" "gclone" "wipedir" "mount::umountTree" "mount::overlayFor" "mount::overlay";
+	extract::bashFuncToFile "$_bigdroid_sudo_function_file" "hook::fetch_path" "hook::wait_until_done";
+
 	local _hook;
 	for _hook in "${@}"; do {
 		
@@ -80,6 +83,5 @@ function hook::wait_until_done() {
 
 }
 
-extract::bashFuncToFile "$_bigdroid_sudo_function_file" "hook::fetch_path" "hook::wait_until_done";
 
 # TODO: Create a stat holder file and a function to retrieve the status of running hook and/or wait for that hook to complete in a subprocess over another hook.
