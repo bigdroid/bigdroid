@@ -60,7 +60,7 @@ parse_commandline()
 			--help)
 				print_help && exit 0;
 				;;
-			--dev|--force)
+			--dev|--force|--sync)
 				_subcommand_hook_args+=("$_key"); # For subcommand::hook()
 				;;
 			--) # Do not parse anymore if _run_target_args are found.

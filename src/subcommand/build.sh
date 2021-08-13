@@ -36,6 +36,7 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 
 	}
 	use build.clap;
+	trap "mount::umountTree $_arg_path" EXIT; # To unmount mountpoints on intentional/unintentional exit
 
 	### Load the project metadata
 	unset NAME CODENAME VERSION AUTHORS IMAGE HOOKS REPOSITORY HOMEPAGE BUGREPORT TAGS;

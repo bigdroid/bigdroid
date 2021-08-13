@@ -11,11 +11,12 @@ function subcommand::hook() {
 
 	local _arg_force=off;
 	local _arg_dev=off;
+	local _arg_sync=off;
 	# local _arg_syncmeta=off;
 
 	# Parse additional arguments in a fast wae
 	local _arg_eval;
-	for _arg_eval in "force" "dev"; do {
+	for _arg_eval in "force" "dev" "sync"; do {
 		case "$@" in
 			*--${_arg_eval}*)
 				eval "_arg_${_arg_eval}=on";

@@ -98,5 +98,10 @@ function hook::install() {
 
 		} fi
 
+		# Run git pull if required
+		if test "$_arg_sync" == "on"; then {
+			git -C "$_hook_dir" pull --ff;
+		} fi
+
 	} done
 }
