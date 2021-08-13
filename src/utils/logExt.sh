@@ -38,5 +38,9 @@ function log::rootcmd() {
 }
 
 function runas::root() {
-	sudo -E "$@";
+	if test "$EUID" -ne 0; then {
+		sudo -E "$@";
+	} else {
+		"$@";
+	} fi
 }

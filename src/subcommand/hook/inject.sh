@@ -13,7 +13,7 @@ function hook::inject() {
 		SRC_DIR="$_src_dir"	\
 		MOUNT_DIR="$_mount_dir" \
 		TMP_DIR="$_tmp_dir" \
-		runas::root "$_script" || {
+		runas::root bash -eEuT "$_script" || {
 								local _r=$?;
 								echo "${_orig_script}" > "$_script";
 								log::error "${_hook_dir##*/} exited with error code $_r" $_r || process::self::exit;
