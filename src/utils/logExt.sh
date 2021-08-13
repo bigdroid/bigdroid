@@ -13,7 +13,7 @@ function log::cmd() {
 	# args=$(printf '%q ' "$@")
 	# local string="$@"
 	# println "Running ${string:0:$((69 - ${#PFUNCNAME}))}..."
-	if test "$_arg_no_verbose" == "off"; then {
+	if test "${_arg_no_verbose:-off}" == "off"; then {
 		log::info "Running ${_string::69}...";
 	} fi
 	# result="$(bash -c "$args" 2>&1)"
