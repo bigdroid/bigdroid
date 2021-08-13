@@ -13,7 +13,7 @@ function hook::inject() {
 		SRC_DIR="$_src_dir"	\
 		MOUNT_DIR="$_mount_dir" \
 		TMP_DIR="$_tmp_dir" \
-		runas::root -c "$_script" || {
+		runas::root "$_script" || {
 								local _r=$?;
 								echo "${_orig_script}" > "$_script";
 								log::error "${_hook_dir##*/} exited with error code $_r" $_r || process::self::exit;
@@ -30,6 +30,7 @@ function hook::inject() {
 		_bd_hook_bootstrap="${_bd_hook_bootstrap%\}}";
 	}
 	_bd_hook_bootstrap="$(
+		echo '#!'"$(command -v env) bash";
 		echo '___self_PID=$$;';
 		echo "$_bd_hook_bootstrap";
 		

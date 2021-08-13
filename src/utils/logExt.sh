@@ -38,6 +38,5 @@ function log::rootcmd() {
 }
 
 function runas::root() {
-	sudo -E "$BASH" -eEuT -o pipefail \
-			-O expand_aliases -O expand_aliases "$@";
+	sudo -E "$@";
 }
