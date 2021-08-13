@@ -56,7 +56,9 @@ function geco() {
 }
 
 function gclone(){
-	echo -e "============= ${GREEN}Progress${RC} = ${ORANGE}Speed${RC} ========================================"
+	# echo -e "============= ${GREEN}Progress${RC} = ${ORANGE}Speed${RC} ========================================"
+	echo -e "============= Progress = Speed ========================================"
+
 	rsync -ah --info=progress2 "$@"
 }
 
