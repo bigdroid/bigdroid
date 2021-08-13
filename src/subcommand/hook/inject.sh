@@ -45,6 +45,8 @@ function hook::inject() {
 			hook::wait_until_done
 			log::info
 			log::warn
+			log::cmd
+			log::rootcmd
 		)
 
 		for _func in "${FUNC_LIST[@]}"; do {

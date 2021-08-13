@@ -20,7 +20,11 @@ function log::cmd() {
 	if ! test -v ROOT; then {
 		_result="$("$@" 2>&1)" || _result_retcode=$?;
 	} else {
-		_result="$(sudo "$@" 2>&1)" || _result_retcode=$?;
+		if test "$EUID" -eq "0"; then {
+			_result="$("$@" 2>&1)" || _result_retcode=$?;
+		} else {
+			_result="$(sudo "$@" 2>&1)" || _result_retcode=$?;
+		} fi
 	} fi
 
 	if test "${_result_retcode:=0}" != 0; then {
