@@ -3,12 +3,10 @@ function hook::inject() {
 
 	function inject::run_script() {
 		local _script="$1";
-		local _orig_script;
-		# Bootstrap
-		_orig_script=$(< "$_script");
+		local _orig_script && _orig_script=$(< "$_script");
 
-		cat "$_bigdroid_sudo_function_file" > "$_script";
-		echo "${_orig_script}" >> "$_script"
+		echo "$_bd_hook_bootstrap" > "$_script";
+		echo "${_orig_script}" >> "$_script";
 
 		# Exports
 		HOOK_DIR="${_script%/*}" \
@@ -26,18 +24,36 @@ function hook::inject() {
 	}
 
 	# Bootstrap bash functions
-	local _bb_bootstrap;
-	_bb_bootstrap=$(declare -f bb_bootstrap_header) && {
-		_bb_bootstrap="${_bb_bootstrap#*{}";
-		_bb_bootstrap="${_bb_bootstrap%\}}";
+	local _bd_hook_bootstrap;
+	_bd_hook_bootstrap=$(declare -f bb_bootstrap_header) && {
+		_bd_hook_bootstrap="${_bd_hook_bootstrap#*{}";
+		_bd_hook_bootstrap="${_bd_hook_bootstrap%\}}";
 	}
-	echo '___self_PID=$$;' >> "$_bigdroid_sudo_function_file";
-	echo "$_bb_bootstrap" >> "$_bigdroid_sudo_function_file";
-	extract::bashFuncToFile "$_bigdroid_sudo_function_file" "geco" "gclone" "wipedir" "mount::umountTree" "mount::overlayFor" "mount::overlay";
-	extract::bashFuncToFile "$_bigdroid_sudo_function_file" "hook::parsemeta" "hook::fetch_path" "hook::wait_until_done";
-	extract::bashFuncToFile "$_bigdroid_sudo_function_file" "log::info" "log::warn";
-	echo >> "$_bigdroid_sudo_function_file";
-	
+	_bd_hook_bootstrap="$(
+		echo '___self_PID=$$;';
+		echo "$_bd_hook_bootstrap";
+		
+		FUNC_LIST=(
+			geco
+			gclone
+			wipedir
+			mount::umountTree
+			mount::overlayFor
+			mount::overlay
+			hook::parsemeta
+			hook::fetch_path
+			hook::wait_until_done
+			log::info
+			log::warn
+		)
+
+		for _func in "${FUNC_LIST[@]}"; do {
+			_func_content=$(declare -f "$_func");
+			echo "$_func_content; export -f $_func";
+		} done
+
+		echo
+	)";	
 
 	local _hook;
 	for _hook in "${@}"; do {
