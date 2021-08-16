@@ -28,6 +28,7 @@ readonly SUBCOMMANDS_DESC=(
 # Exports
 _var_exports=(
 	_bigdroid_registrydir
+	_bigdroid_common_hook_file_name
 )
 for _var in "${_var_exports[@]}"; do {
 	export "$_var";

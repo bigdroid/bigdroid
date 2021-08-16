@@ -83,7 +83,7 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 
 		*)
 			log::warn "${_local_image_path##*/} is a uncommon file-type, trying to extract with 7z";
-			log::cmd 7z -aos -o"$_src_dir" "$_local_image_path";
+			# log::cmd 7z x -aos -o"$_src_dir" "$_local_image_path";
 		;;
 	esac
 	mount::overlayFor "$_src_dir";
