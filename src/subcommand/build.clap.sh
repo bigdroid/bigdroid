@@ -10,7 +10,7 @@
 # ENSURE ROOT
 if ! sudo -nv 2>/dev/null; then {
 	log::warn "Build command needs root for some operations, reqesting root...";
-	sudo -v || process::self::exit;
+	sudo -v;
 	
 	# Perserve the root access
 	(
@@ -32,6 +32,7 @@ _arg_run="off";
 _arg_hooks_only="off";
 _arg_image_only="off";
 _arg_reply_yes="off";
+_arg_no_squashfs="off";
 
 parse_commandline()
 {
@@ -53,6 +54,9 @@ parse_commandline()
 				;;
 			--image-only)
 				_arg_image_only="on";
+				;;
+			--no-squashfs)
+				_arg_no_squashfs="on";
 				;;
 			--reply-yes)
 				_arg_reply_yes="on";

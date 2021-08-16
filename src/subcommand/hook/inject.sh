@@ -67,21 +67,9 @@ function hook::inject() {
 		} done
 
 cat <<'EOF'
-function bash_run() {
-	function err() {
-		_r=$?;
-		sed -i '1d' "$_script";
-		log::error "${HOOK_DIR##*/} exited with error code $_r" $_r || exit;
-	}
-
-	local _input="$1";
-	"$BASH" -eEuT -o pipefail -O inherit_errexit "$_input" || err;
-	sed -i '1d' "$_script";
-
-}
-
 # Export log::error
-export -f log::error process::self::exit;
+export -f log::error;
+# export -f process::self::exit;
 
 # Use gearlock stuff
 use box::libgearlock;
@@ -90,8 +78,13 @@ for _script in "${@}"; do {
 
 	set -a && source "${_script%/*}/bd.meta.sh" && set +a;
 	# _orig_script=$(< "$_script");
-	sed -i "1i trap 'exit 1' USR1 && ___self_PID=\$\$ && trap 'BB_ERR_MSG=\"UNCAUGHT EXCEPTION\" log::error \"\$BASH_COMMAND\" || process::self::exit' ERR;" "$_script";
-	read;
+	# trap 'exit 1' USR1 && ___self_PID=\$\$ &&
+	# Make sure the header previously does not exists
+	_line_one="$(head -n1 "$_script")";
+	if [[ "$_line_one" =~ trap.*log::error.*ERR ]]; then {
+		sed -i '1d' "$_script";
+	} fi
+	sed -i "1i trap 'BB_ERR_MSG=\"UNCAUGHT EXCEPTION\" log::error \"\$BASH_COMMAND\" || exit' ERR;" "$_script";
 
 	# Exports
 	unset HOOK_DIR SRC_DIR MOUNT_DIR TMP_DIR;
@@ -103,11 +96,20 @@ for _script in "${@}"; do {
 	log::info "Hooking ${HOOK_DIR##*/}";
 
 	if test "$_arg_reply_yes" != "on" && test "${INTERACTIVE:-}" != "true"; then
-		bash_run "$_script";
+		"$BASH" -eEuT -o pipefail -O inherit_errexit "$_script" || {
+			_r=$?;
+			sed -i '1d' "$_script";
+			log::error "${HOOK_DIR##*/} exited with error code $_r" $_r || exit;
+		}
 	else
-		yes | bash_run "$_script";
+		yes | "$BASH" -eEuT -o pipefail -O inherit_errexit "$_script" || {
+			_r=$?;
+			sed -i '1d' "$_script";
+			log::error "${HOOK_DIR##*/} exited with error code $_r" $_r || exit;
+		}
 	fi
-
+	
+	sed -i '1d' "$_script";
 	# echo "${_orig_script}" > "$_script";
 	echo "${_script%/*}" >> "$_applied_hooks_statfile";
 
@@ -139,7 +141,7 @@ EOF
 		# Read metadata
 		(
 			# Load native gearlock functions and the project metadata
-			source "$_hook_dir/bd.meta.sh" || log::error "Failed to load ${_hook_dir##*/} metadata" 1 || process::self::exit;
+			source "$_hook_dir/bd.meta.sh" || log::error "Failed to load ${_hook_dir##*/} metadata" 1 || exit;
 
 			# Satisfy dependencies
 			for _dep in "${DEPENDENCIES[@]}"; do
@@ -152,7 +154,7 @@ EOF
 		)
 		HOOK_SCRIPTS+=("$_hook_dir/$_bigdroid_common_hook_file_name");
 	} done
-	runas::root "$BASH" -eEuT "$_sudo_wrapper" "${HOOK_SCRIPTS[@]}" || process::self::exit;
+	runas::root "$BASH" -eEuT "$_sudo_wrapper" "${HOOK_SCRIPTS[@]}" || exit;
 }
 
 #######################

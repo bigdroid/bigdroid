@@ -38,7 +38,7 @@ function subcommand::new()
 		}
 	} fi
 	log::info "Setting up project at \`$_arg_path\`"
-	mkdir -p "$_arg_path" || log::error "Failed to initialize the project directory" || exit;
+	mkdir -p "$_arg_path" || log::error "Failed to initialize the project directory" 1 || exit;
 
 	# println::info "Resetting CODENAME metadata to $_arg_codename on $_bashbox_meta_name"
 	# sed -i "s|\bCODENAME=\".*\"|CODENAME=\"$_arg_codename\"|g" "$_arg_path/$_bashbox_meta_name" \

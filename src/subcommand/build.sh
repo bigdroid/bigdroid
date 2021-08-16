@@ -36,7 +36,7 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 
 	}
 	use build.clap;
-	trap "mount::umountTree $_arg_path" EXIT; # To unmount mountpoints on intentional/unintentional exit
+	trap 'mount::umountTree "$_arg_path"; wipedir "$_tmp_dir" "$_overlay_dir"' EXIT; # To unmount mountpoints on intentional/unintentional exit
 
 	### Load the project metadata
 	unset NAME CODENAME VERSION AUTHORS IMAGE HOOKS REPOSITORY HOMEPAGE BUGREPORT TAGS;
@@ -83,7 +83,7 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 
 		*)
 			log::warn "${_local_image_path##*/} is a uncommon file-type, trying to extract with 7z";
-			# log::cmd 7z x -aos -o"$_src_dir" "$_local_image_path";
+			# log::cmd 7z x -aos -o"$_src_dir" "$_local_image_path"; # FIXME
 		;;
 	esac
 	mount::overlayFor "$_src_dir";
@@ -125,7 +125,7 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 	if test -n "$SYSTEM_IMAGE"; then {
 		export SYSTEM_IMAGE; # EXPORTS
 	} else {
-		log::error "No SYSTEM_IMAGE was found in src/" 1 || process::self::exit;
+		log::error "No SYSTEM_IMAGE was found in src/" 1 || exit;
 	} fi
 
 	log::rootcmd mount -oro,loop "$SYSTEM_IMAGE" "$SYSTEM_MOUNT_DIR";
@@ -149,7 +149,7 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 	# Check if hooks only
 	if test "$_arg_hooks_only" == "on"; then {
 		log::info "Terminating the process without building ISO, only loaded hooks";
-		process::self::exit;
+		exit 0;
 	} fi
 
 
@@ -179,8 +179,9 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 	if test "${SYSTEM_IMAGE##*/}" == "system.sfs"; then {
 		log::rootcmd 7z x -o"$_src_dir" "$SYSTEM_IMAGE" 'system.img';
 		log::rootcmd rm "$SYSTEM_IMAGE"; # Remove system.sfs
-		SYSTEM_IMAGE="$_src_dir/system.img";
 	} fi
+	log::rootcmd mv "$_src_dir/system.img" "$_tmp_dir/";
+	SYSTEM_IMAGE="$_tmp_dir/system.img";
 
 	_system_mount_dir_size="$(runas::root du -sbm "$SYSTEM_MOUNT_DIR" | awk '{print $1}')";
 	_orig_system_image_size="$(du -sbm "$SYSTEM_IMAGE" | awk '{print $1}')";
@@ -202,7 +203,7 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 	# Put new system image content
 	# export PFUNCNAME="${FUNCNAME[0]}::create_new_system"
 	mkdir -p "$TEMP_SYSTEM_IMAGE_MOUNT";
-	log::rootcmd mount -orw,loop "$SYSTEM_IMAGE" "$TEMP_SYSTEM_IMAGE_MOUNT"
+	log::rootcmd mount -orw,loop "$SYSTEM_IMAGE" "$TEMP_SYSTEM_IMAGE_MOUNT";
 	# println.cmd wipedir "$TEMP_SYSTEM_IMAGE_MOUNT"
 	log::rootcmd rsync -a --delete "$SYSTEM_MOUNT_DIR/" "$TEMP_SYSTEM_IMAGE_MOUNT"
 	# Determine if we need to reduce system image size
@@ -213,32 +214,39 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 
 	log::rootcmd umount -fd "$TEMP_SYSTEM_IMAGE_MOUNT";
 	log::rootcmd bash -c "e2fsck -fy $SYSTEM_IMAGE || true";
-	log::rootcmd rm -rf "$TEMP_SYSTEM_IMAGE_MOUNT"
+	log::rootcmd rm -rf "$TEMP_SYSTEM_IMAGE_MOUNT";
 	if test -v "_sysimg_reduceSize"; then {
 		local sysimg_newSize;
 		sysimg_newSize="$(( (_orig_system_image_size - ${_sysimg_freeSpace/M/}) + 100 ))M"
 		log::rootcmd resize2fs "$SYSTEM_IMAGE" "$sysimg_newSize";
 		log::rootcmd bash -c "e2fsck -fy $SYSTEM_IMAGE || true";
 	} fi
-	
 
-	# Create suqashed system image
-	if test "$_arg_image_only" == "off"; then {
-		log::rootcmd chmod 644 "$SYSTEM_IMAGE";
-		log::rootcmd mksquashfs "$SYSTEM_IMAGE" "$_src_dir/system.sfs";
-		log::rootcmd rm "$SYSTEM_IMAGE"; # Remove system.img
-	} fi
+	## Replace system image under /src
+	log::rootcmd touch "$_src_dir/system.img";
+	log::rootcmd mount --bind "$SYSTEM_IMAGE" "$_src_dir/system.img";
+	SYSTEM_IMAGE="$_src_dir/system.img";
 
 	# Create new ramdisk images
+	log::info "Creating ramdisks";
 	ramdisk::create "$INITIAL_RAMDISK_MOUNT_DIR" "$_src_dir/initrd.img";
 	ramdisk::create "$INSTALL_RAMDISK_MOUNT_DIR" "$_src_dir/install.img";
 	if test "$SECONDARY_RAMDISK" == true; then {
 		ramdisk::create "$SECONDARY_RAMDISK_MOUNT_DIR" "$_src_dir/ramdisk.img";
 	} fi
 
-	# Now lets finally create an ISO image
 	if test "$_arg_image_only" == "off"; then {
+		# Create suqashed system image
+		if test "$_arg_no_squashfs" == "off"; then {
+			log::rootcmd chmod 644 "$SYSTEM_IMAGE";
+			log::rootcmd chown -h root:root "$SYSTEM_IMAGE";
+			log::rootcmd mksquashfs "$SYSTEM_IMAGE" "$_src_dir/system.sfs";
+			log::rootcmd umount -fd "$SYSTEM_IMAGE";
+			log::rootcmd rm "$SYSTEM_IMAGE"; # Remove system.img
+			SYSTEM_IMAGE="$_src_dir/system.sfs"; # Reset to system.sfs
+		} fi
 
+		# Now lets finally create an ISO image
 		(
 			OUTPUT_ISO="$_target_workdir/${CODENAME}_${VERSION}.iso";
 			rm -f "$OUTPUT_ISO";

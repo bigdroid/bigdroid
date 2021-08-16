@@ -3,7 +3,7 @@ CODENAME="bigdroid"
 AUTHORS=("AXON <axonasif@gmail.com>")
 VERSION="1.0"
 DEPENDENCIES=(
-	"std::0.1.5"
+	"std::0.1.6"
 	"argbash::0.1.0"
 	"bashbox::0.3.5"
 )

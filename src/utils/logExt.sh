@@ -28,7 +28,7 @@ function log::cmd() {
 	} fi
 
 	if test "${_result_retcode:=0}" != 0; then {
-		log::error "${_string} exited with errorcode ${_result_retcode}\n$_result" $_result_retcode || process::self::exit;
+		log::error "${_string} exited with errorcode ${_result_retcode}\n$_result" $_result_retcode || exit;
 	} fi
 	
 };

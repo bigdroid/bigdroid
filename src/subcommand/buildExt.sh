@@ -29,7 +29,7 @@ function ramdisk::extract() {
 		} elif [[ "$_image_type" =~ .*gzip.* ]]; then {
 			zcat "$_ramdisk_image" | runas::root "$BASH" -c '(cpio -iud; cpio -iud || true)' > /dev/null 2>&1;
 		} else {
-			log::error "Unknown image format: ${_ramdisk_image##*/}" 1 || process::self::exit;
+			log::error "Unknown image format: ${_ramdisk_image##*/}" 1 || exit;
 		} fi
 	)
 }
@@ -39,7 +39,7 @@ function ramdisk::create() {
 	local _output_image="$2";
 	(
 		cd "$_input_dir";
-	 	{ runas::root "$BASH" -c "find . | cpio --owner=0:0 -o -H newc | gzip" > "$_output_image"; } 1>/dev/null;
+	 	{ runas::root "$BASH" -c "find . | cpio --owner=0:0 -o -H newc | gzip" > "$_output_image"; } > /dev/null 2>&1;
 	)	
 }
 
