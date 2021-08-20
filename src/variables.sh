@@ -44,7 +44,7 @@ function ttttt______variables() {
 		rsync
 		cpio
 		coreutils
-		e2fsprogs|e2fsck
+		"e2fsprogs|e2fsck"
 		findutils
 		gnugrep
 		wget
