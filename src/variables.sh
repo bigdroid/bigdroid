@@ -40,14 +40,18 @@ function ttttt______variables() {
 	# Dependencie check
 	local REQUIRED_UTILS;
 	REQUIRED_UTILS=(
-		e2fsck
+		curl
+		rsync
+		cpio
+		coreutils
+		e2fsprogs|e2fsck
+		findutils
+		gnugrep
+		wget
+		file
 		mksquashfs
 		genisoimage
-		dd
-		7z
-		rsync
-		find
-		grep
+		p7zip
 	)
 
 	for prog in "${REQUIRED_UTILS[@]}"; do

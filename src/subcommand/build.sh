@@ -186,8 +186,8 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 	_system_mount_dir_size="$(runas::root du -sbm "$SYSTEM_MOUNT_DIR" | awk '{print $1}')";
 	_orig_system_image_size="$(du -sbm "$SYSTEM_IMAGE" | awk '{print $1}')";
 
-	if test "$(( _system_mount_dir_size + 100 ))" -gt "$_orig_system_image_size"; then {
-		_megs2add="$(( (_system_mount_dir_size - _orig_system_image_size) + 100 ))"
+	if test "$(( _system_mount_dir_size + 300 ))" -gt "$_orig_system_image_size"; then {
+		_megs2add="$(( (_system_mount_dir_size - _orig_system_image_size) + 300 ))"
 	} fi
 
 	# if mountpoint -q "$TEMP_SYSTEM_IMAGE_MOUNT"; then {
