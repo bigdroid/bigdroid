@@ -8,16 +8,18 @@
 # needed because of Argbash --> m4_ignore([
 
 # ENSURE ROOT
-if ! sudo -nv 2>/dev/null; then {
-	log::warn "Build command needs root for some operations, reqesting root...";
-	sudo -v;
-	
-	# Perserve the root access
-	(
-		while sleep 60 && test -e "/proc/$___self_PID"; do {
-			sudo -v;
-		} done
-	) &
+if test "$EUID" -ne 0; then {
+	if ! sudo -nv 2>/dev/null; then {
+		log::warn "Build command needs root for some operations, reqesting root...";
+		sudo -v;
+
+		# Perserve the root access
+		(
+			while sleep 60 && test -e "/proc/$___self_PID"; do {
+				sudo -v;
+			} done
+		) &
+	} fi
 } fi
 
 
