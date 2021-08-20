@@ -196,7 +196,7 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 
 	if test -v "_megs2add"; then {
 		log::rootcmd dd if=/dev/zero bs=1M count="$_megs2add" >> "$SYSTEM_IMAGE";
-		log::rootcmd e2fsck -fy "$SYSTEM_IMAGE";
+		log::rootcmd bash -c "e2fsck -fy $SYSTEM_IMAGE || true";
 		log::rootcmd resize2fs "$SYSTEM_IMAGE";
 	} fi
 
@@ -208,9 +208,9 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 	log::rootcmd rsync -a --delete "$SYSTEM_MOUNT_DIR/" "$TEMP_SYSTEM_IMAGE_MOUNT"
 	# Determine if we need to reduce system image size
 	_sysimg_freeSpace="$(runas::root df -h --output=avail "$TEMP_SYSTEM_IMAGE_MOUNT" | tail -n1 | xargs)"
-	if test "${_sysimg_freeSpace/M/}" -gt 100; then {
-		_sysimg_reduceSize=true;
-	} fi
+	# if test "${_sysimg_freeSpace/M/}" -gt 100; then { # Temporarily disable it
+	# 	_sysimg_reduceSize=true;
+	# } fi
 
 	log::rootcmd umount -fd "$TEMP_SYSTEM_IMAGE_MOUNT";
 	log::rootcmd bash -c "e2fsck -fy $SYSTEM_IMAGE || true";

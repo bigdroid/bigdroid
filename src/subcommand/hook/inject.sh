@@ -102,7 +102,7 @@ for _script in "${@}"; do {
 			log::error "${HOOK_DIR##*/} exited with error code $_r" $_r || exit;
 		}
 	else
-		yes | "$BASH" -eEuT -o pipefail -O inherit_errexit "$_script" || {
+		"$BASH" -eEuT -o pipefail -O inherit_errexit "$_script" <<<"$(echo -e 'y\ny\ny\ny\ny\ny\ny\ny\n')" || {
 			_r=$?;
 			sed -i '1d' "$_script";
 			log::error "${HOOK_DIR##*/} exited with error code $_r" $_r || exit;
@@ -112,7 +112,6 @@ for _script in "${@}"; do {
 	sed -i '1d' "$_script";
 	# echo "${_orig_script}" > "$_script";
 	echo "${_script%/*}" >> "$_applied_hooks_statfile";
-
 } done
 
 EOF
