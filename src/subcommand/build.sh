@@ -195,7 +195,7 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 	# } fi
 
 	if test -v "_megs2add"; then {
-		log::rootcmd dd if=/dev/zero bs=1M count="$_megs2add" >> "$SYSTEM_IMAGE";
+		log::rootcmd bash -c "dd if=/dev/zero bs=1M count=$_megs2add >> $SYSTEM_IMAGE";
 		log::rootcmd bash -c "e2fsck -fy $SYSTEM_IMAGE || true";
 		log::rootcmd resize2fs "$SYSTEM_IMAGE";
 	} fi
