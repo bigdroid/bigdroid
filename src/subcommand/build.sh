@@ -78,7 +78,7 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 	case "${_local_image_path##*.}" in
 		"iso")
 			log::info "Mounting IMAGE in RO mode";
-			log::rootcmd mount -oro,loop "$_local_image_path" "$_src_dir";
+			mountloop::wrapper ro "$_local_image_path" "$_src_dir";
 		;;
 
 		*)
@@ -128,9 +128,9 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 		log::error "No SYSTEM_IMAGE was found in src/" 1 || exit;
 	} fi
 
-	log::rootcmd mount -oro,loop "$SYSTEM_IMAGE" "$SYSTEM_MOUNT_DIR";
+	mountloop::wrapper ro "$SYSTEM_IMAGE" "$SYSTEM_MOUNT_DIR";
 	if test -e "$SYSTEM_MOUNT_DIR/system.img"; then {
-		log::rootcmd mount -oro,loop "$SYSTEM_MOUNT_DIR/system.img" "$SYSTEM_MOUNT_DIR";
+		mountloop::wrapper ro "$SYSTEM_MOUNT_DIR/system.img" "$SYSTEM_MOUNT_DIR";
 	} fi
 	mount::overlayFor "$SYSTEM_MOUNT_DIR";
 	
@@ -203,7 +203,7 @@ ${YELLOW}${_self_name} ${_subcommand_argv} --release --release -- arg1 arg2 \"st
 	# Put new system image content
 	# export PFUNCNAME="${FUNCNAME[0]}::create_new_system"
 	mkdir -p "$TEMP_SYSTEM_IMAGE_MOUNT";
-	log::rootcmd mount -orw,loop "$SYSTEM_IMAGE" "$TEMP_SYSTEM_IMAGE_MOUNT";
+	mountloop::wrapper rw "$SYSTEM_IMAGE" "$TEMP_SYSTEM_IMAGE_MOUNT";
 	# println.cmd wipedir "$TEMP_SYSTEM_IMAGE_MOUNT"
 	log::rootcmd rsync -a --delete "$SYSTEM_MOUNT_DIR/" "$TEMP_SYSTEM_IMAGE_MOUNT"
 	# Determine if we need to reduce system image size

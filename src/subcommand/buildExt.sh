@@ -83,6 +83,24 @@ function mount::umountTree() {
 	} fi
 }
 
+function mountloop::wrapper() {
+	local _losetup_node && _losetup_node="$(runas::root losetup -f)";
+	local _check;
+	local _found_node;
+	local _write_mode="${1:-ro}" && shift;
+	for _check in /dev /dev/block; do {
+		if test -e "$_check/${_losetup_node##*/}"; then {
+			_found_node="$_check/${_losetup_node##*/}";
+			break;
+		} fi
+	} done
+	if test -e "${_found_node:-}"; then {
+		runas::root mount -oloop="$_found_node",$_write_mode "$@";
+	} else {
+		log::error "Failed to allocate any loopdev" || exit 1;
+	} fi
+}
+
 function mount::overlayFor() {
 	local _for="$1";
 	local _overlay_dir_node="$_overlay_dir/${_for##*/}";
