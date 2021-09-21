@@ -10,8 +10,8 @@
 	SYSTEM_DIR="$SYSTEM_MOUNT_DIR"
 	RECOVERY="yes"
 	GHOME="$SYSTEM_DIR/ghome" && {
-		sudo mkdir -p "$GHOME"
-		sudo chmod 755 "$GHOME"
+		mkdir -p "$GHOME"
+		chmod 755 "$GHOME"
 	}
 	DEPDIR="$GHOME/dependencies"
 	STATDIR="$GHOME/status"
@@ -38,7 +38,7 @@
 	CPU_ARCH="$HOST_ARCH"
     
 	if test -e "$SYSTEM_DIR/build.prop"; then
-		SDK="$(sudo sed -n "s/^ro.build.version.sdk=//p" "$SYSTEM_DIR/build.prop" 2>/dev/null | head -n1)"
+		SDK="$(sed -n "s/^ro.build.version.sdk=//p" "$SYSTEM_DIR/build.prop" 2>/dev/null)"
 	
 		case "$SDK" in
 			22) v="5.1" ;;
